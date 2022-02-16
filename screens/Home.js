@@ -5,7 +5,7 @@ const Home = () => {
   console.log('home ne', firebaseApp.auth().currentUser);
   return (
     <View>
-      <Text>Home</Text>
+      <Text>{firebaseApp.auth().currentUser.phoneNumber}</Text>
       <Button title="Sign out" onPress={() => firebaseApp.auth().signOut()} />
     </View>
   );

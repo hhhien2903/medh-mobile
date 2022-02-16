@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "medh-mobile",
+    "name": "MED-H",
     "slug": "medh-mobile",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -13,16 +13,21 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "medh.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
+      },
+      "config": {
+        "googleSignIn": {
+          "apiKey": "AIzaSyB19JIqtPITMGcaZMHBFJ7FrWw-S-pjQMA",
+          "certificateHash": "2F8691F6133AF6E18A5B4D4986CF416B663AC042"
+        }
       }
     },
     "web": {
