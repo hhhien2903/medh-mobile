@@ -74,7 +74,7 @@ export const Login = () => {
       <Box w="80%">
         <HStack justifyContent="center" mt="5">
           <Heading fontWeight="bold" color="coolGray.800" fontSize={30}>
-            Đăng Nhập
+            ĐĂNG NHẬP
           </Heading>
         </HStack>
         <VStack space={3} mt="5">

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -11,6 +11,9 @@ import { firebaseApp } from './config/firebase';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import User from './screens/User';
 import { Ionicons } from '@expo/vector-icons';
+import LoadingWelcome from './screens/LoadingWelcome';
+import Register from './screens/Register';
+import OneSignal from 'react-native-onesignal';
 // Define the config
 // const config = {
 //   useSystemColorMode: false,
@@ -25,15 +28,23 @@ const Tab = createBottomTabNavigator();
 
 export default function App() {
   const { currentUser, isLoading, setCurrentUser, setIsLoading } = sharedStore((state) => state);
+  const [isLoadingWelcome, setIsLoadingWelcome] = useState(true);
+  OneSignal.setAppId('c06aa8f4-562c-4a2e-aa5c-5c3a529a3ec9');
 
   useEffect(() => {
     const unsubscribed = firebaseApp.auth().onAuthStateChanged((firebaseUser) => {
       if (firebaseUser) {
         console.log('running logged');
-        setCurrentUser(firebaseUser);
+        setTimeout(() => {
+          setIsLoadingWelcome(false);
+          setCurrentUser(firebaseUser);
+        }, 2000);
       } else {
         console.log('running');
-        setCurrentUser(null);
+        setTimeout(() => {
+          setIsLoadingWelcome(false);
+          setCurrentUser(null);
+        }, 2000);
       }
     });
     return () => {
@@ -54,6 +65,22 @@ export default function App() {
               headerTintColor: '#fff',
             }}
           >
+            {isLoadingWelcome && (
+              <Stack.Screen
+                name="LoadingWelcome"
+                options={{
+                  headerShown: false,
+                }}
+                component={LoadingWelcome}
+              />
+            )}
+            <Stack.Screen
+              name="Register"
+              options={{
+                headerShown: false,
+              }}
+              component={Register}
+            />
             <Stack.Screen
               name="Login"
               options={{
