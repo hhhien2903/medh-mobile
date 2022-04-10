@@ -12,14 +12,31 @@ import {
   Select,
   CheckIcon,
   ScrollView,
+  AlertDialog,
+  useToast,
 } from 'native-base';
 import moment from 'moment';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import medHLogo from '../assets/images/med-h-logo.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useNavigation } from '@react-navigation/native';
+import { firebaseApp } from '../config/firebase';
+import sharedStore from '../store/sharedStore';
+import doctorAPI from '../api/doctorAPI';
+import hospitalAPI from '../api/hospitalAPI';
+
 const Register = () => {
   const [isShowDatePicker, setIsShowDatePicker] = useState(false);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(new Date(946713509000));
+  const navigation = useNavigation();
+  const { setIsNotRegistered, isShowRegisterSuccessfulAlert, setIsShowRegisterSuccessfulAlert } =
+    sharedStore((state) => state);
+  const [isReadOnlyPhoneNumberField, setIsReadOnlyPhoneNumberField] = useState(false);
+  const [isReadOnlyEmailField, setIsReadOnlyEmailField] = useState(false);
+  const [formRegisterData, setFormRegisterData] = useState({});
+  const [hospitalList, setHospitalList] = useState([]);
+  const toast = useToast();
+
   const showDatepicker = () => {
     setIsShowDatePicker(true);
   };
@@ -30,7 +47,64 @@ const Register = () => {
     }
     setIsShowDatePicker(false);
     setDate(currentDate);
-    console.log(currentDate);
+  };
+
+  const checkExistingInfo = () => {
+    const { email, phoneNumber } = firebaseApp.auth().currentUser;
+    if (email) {
+      setIsReadOnlyEmailField(true);
+      setFormRegisterData({ ...formRegisterData, email: email });
+    }
+    if (phoneNumber) {
+      setIsReadOnlyPhoneNumberField(true);
+      setFormRegisterData({ ...formRegisterData, mobile: '0' + phoneNumber.substring(3) });
+    }
+  };
+
+  const getAllHospital = async () => {
+    try {
+      const result = await hospitalAPI.getAllHospital();
+      setHospitalList(result);
+      console.log(result);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    checkExistingInfo();
+    getAllHospital();
+  }, []);
+
+  const handleClickRegister = async () => {
+    // console.log(formRegisterData);
+    try {
+      const data = {
+        ...formRegisterData,
+        dateOfBirth: moment(date).toISOString(),
+      };
+      console.log(data);
+      const result = await doctorAPI.register(data);
+      console.log(result);
+      setIsShowRegisterSuccessfulAlert(true);
+    } catch (error) {
+      console.log(error);
+      if (error.status === 400) {
+        toast.show({
+          title: 'Đăng Ký Không Thành Công.',
+          status: 'warning',
+          placement: 'top',
+          description:
+            'Email/SĐT của bạn đã từng được đăng ký trước đây, hãy bấm nút Quay Lại và tiến hành đăng nhập lại.',
+        });
+      }
+    }
+  };
+
+  const goBackToLoginScreen = () => {
+    firebaseApp.auth().signOut();
+    setIsNotRegistered(false);
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   return (
@@ -50,7 +124,7 @@ const Register = () => {
               placeholder="Họ Và Tên"
               fontSize={16}
               height={50}
-              // onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
+              onChangeText={(value) => setFormRegisterData({ ...formRegisterData, name: value })}
             />
           </FormControl>
 
@@ -67,9 +141,10 @@ const Register = () => {
               }}
               mt="1"
               fontSize={16}
+              onValueChange={(value) => setFormRegisterData({ ...formRegisterData, gender: value })}
             >
-              <Select.Item label="Nam" value="0" />
-              <Select.Item label="Nữ" value="1" />
+              <Select.Item label="Nam" value={true} />
+              <Select.Item label="Nữ" value={false} />
             </Select>
             <FormControl.ErrorMessage></FormControl.ErrorMessage>
           </FormControl>
@@ -83,17 +158,10 @@ const Register = () => {
               height={50}
               isReadOnly
               value={moment(date).format('DD/MM/YYYY')}
+              onValueChange={(value) =>
+                setFormRegisterData({ ...formRegisterData, dateOfBirth: value })
+              }
               InputRightElement={
-                // <Button
-                //   rounded="none"
-                //   w="1/3"
-                //   h="full"
-                //   bg="info.500"
-                //   // onPress={handleGetOTPCode}
-                //   // isDisabled={!formData.phoneNumber}
-                // >
-                //   Chọn
-                // </Button>
                 <Icon
                   as={<AntDesign name="calendar" />}
                   size={5}
@@ -102,7 +170,6 @@ const Register = () => {
                   onPress={showDatepicker}
                 />
               }
-              // onChangeText={(value) => setFormData({ ...formData, OTPCode: value })}
             />
             <FormControl.ErrorMessage></FormControl.ErrorMessage>
           </FormControl>
@@ -115,6 +182,40 @@ const Register = () => {
               onChange={onChangeDatePicker}
             />
           )}
+          <FormControl isRequired>
+            <FormControl.Label _text={{ fontSize: 17 }}>CMND/CCCD:</FormControl.Label>
+            <Input
+              borderColor="info.500"
+              placeholder="CMND/CCCD"
+              fontSize={16}
+              height={50}
+              onChangeText={(value) => setFormRegisterData({ ...formRegisterData, cmnd: value })}
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormControl.Label _text={{ fontSize: 17 }}>Số Điện Thoại:</FormControl.Label>
+            <Input
+              borderColor="info.500"
+              placeholder="Số Điện Thoại"
+              fontSize={16}
+              height={50}
+              defaultValue={firebaseApp.auth().currentUser?.phoneNumber}
+              isReadOnly={isReadOnlyPhoneNumberField}
+              onChangeText={(value) => setFormRegisterData({ ...formRegisterData, mobile: value })}
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormControl.Label _text={{ fontSize: 17 }}>Email:</FormControl.Label>
+            <Input
+              borderColor="info.500"
+              placeholder="Email"
+              fontSize={16}
+              height={50}
+              value={firebaseApp.auth().currentUser?.email}
+              isReadOnly={isReadOnlyEmailField}
+              onChangeText={(value) => setFormRegisterData({ ...formRegisterData, email: value })}
+            />
+          </FormControl>
 
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Bệnh Viện Công Tác:</FormControl.Label>
@@ -129,9 +230,13 @@ const Register = () => {
               }}
               mt="1"
               fontSize={16}
+              onValueChange={(value) =>
+                setFormRegisterData({ ...formRegisterData, hospitalId: value })
+              }
             >
-              <Select.Item label="Chợ Rẫy" value="0" />
-              <Select.Item label="Quân Y 115" value="1" />
+              {hospitalList.map((hospital) => {
+                return <Select.Item key={hospital.id} label={hospital.name} value={hospital.id} />;
+              })}
             </Select>
             <FormControl.ErrorMessage></FormControl.ErrorMessage>
           </FormControl>
@@ -140,7 +245,7 @@ const Register = () => {
             bg="info.500"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
-            // onPress={handleSubmitOTP}
+            onPress={handleClickRegister}
           >
             Đăng Ký
           </Button>
@@ -149,15 +254,26 @@ const Register = () => {
             bg="trueGray.300"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
-            onPress={() => {
-              navigation.goBack();
-              // navigation.navigate('Login');
-            }}
+            onPress={goBackToLoginScreen}
           >
             Quay lại
           </Button>
         </VStack>
       </Box>
+      <AlertDialog isOpen={isShowRegisterSuccessfulAlert}>
+        <AlertDialog.Content>
+          <AlertDialog.Header>Đăng Ký Thông Tin Thành Công</AlertDialog.Header>
+          <AlertDialog.Body>
+            Bạn đã đăng ký thông tin thành công. Người quản lý sẽ xem xét đơn đăng ký của bạn, hãy
+            đăng nhập lại ứng dụng sau khi bạn nhận được email xác nhận của chúng tôi. Cảm ơn.
+          </AlertDialog.Body>
+          <AlertDialog.Footer>
+            <Button colorScheme="success" onPress={goBackToLoginScreen}>
+              Đồng Ý
+            </Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog>
     </ScrollView>
   );
 };

@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Login from './screens/Login';
 import { Icon, NativeBaseProvider } from 'native-base';
-import Home from './screens/Home';
 import LoginPhone from './screens/LoginPhone';
 import sharedStore from './store/sharedStore';
 import { firebaseApp } from './config/firebase';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import User from './screens/User';
 import { Ionicons } from '@expo/vector-icons';
 import LoadingWelcome from './screens/LoadingWelcome';
 import Register from './screens/Register';
-import OneSignal from 'react-native-onesignal';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import doctorAPI from './api/doctorAPI';
+import AuthNavigator from './screens/AuthNavigator';
+import AppTabNavigator from './screens/AppTabNavigator';
 // Define the config
 // const config = {
 //   useSystemColorMode: false,
@@ -26,25 +28,65 @@ import OneSignal from 'react-native-onesignal';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 export default function App() {
-  const { currentUser, isLoading, setCurrentUser, setIsLoading } = sharedStore((state) => state);
+  const {
+    currentUser,
+    setCurrentUser,
+    tokenTest,
+    setTokenTest,
+    setIsNotRegistered,
+    setIsShowRegisterSuccessfulAlert,
+    setIsShowDisabledAlert,
+  } = sharedStore((state) => state);
   const [isLoadingWelcome, setIsLoadingWelcome] = useState(true);
-  OneSignal.setAppId('c06aa8f4-562c-4a2e-aa5c-5c3a529a3ec9');
+  const [isNotLogIn, setIsNotLogIn] = useState(true);
 
   useEffect(() => {
-    const unsubscribed = firebaseApp.auth().onAuthStateChanged((firebaseUser) => {
-      if (firebaseUser) {
-        console.log('running logged');
-        setTimeout(() => {
-          setIsLoadingWelcome(false);
-          setCurrentUser(firebaseUser);
-        }, 2000);
-      } else {
+    const unsubscribed = firebaseApp.auth().onAuthStateChanged(async (firebaseUser) => {
+      if (!firebaseUser) {
         console.log('running');
         setTimeout(() => {
           setIsLoadingWelcome(false);
-          setCurrentUser(null);
+          setIsNotLogIn(true);
         }, 2000);
+        return;
+      }
+
+      try {
+        console.log('running logged');
+        setTimeout(() => {
+          setIsLoadingWelcome(false);
+        }, 2000);
+        let { phoneNumber, email } = firebaseUser;
+        if (phoneNumber) {
+          phoneNumber = '0' + phoneNumber.substring(3);
+        }
+        const doctorData = await doctorAPI.checkAccountRegistered(phoneNumber, email);
+        if (doctorData.isActive === false) {
+          setIsShowRegisterSuccessfulAlert(true);
+        }
+        if (doctorData.isDisabled === true) {
+          setIsShowDisabledAlert(true);
+          return;
+        }
+        if (doctorData.isActive === true) {
+          console.log('login va da active');
+          setIsNotLogIn(false);
+          setCurrentUser(doctorData);
+        }
+      } catch (error) {
+        if (error.status === 500) {
+          console.log('chay ne');
+          setIsNotRegistered(true);
+        }
       }
     });
     return () => {
@@ -52,99 +94,65 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    registerForPushNotificationsAsync().then((token) => {
+      setTokenTest(token);
+    });
+  }, []);
+
+  async function registerForPushNotificationsAsync() {
+    let token;
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        alert('Failed to get push token for push notification!');
+        return;
+      }
+      token = (await Notifications.getExpoPushTokenAsync()).data;
+      // console.log(token);
+    } else {
+      alert('Must use physical device for Push Notifications');
+    }
+
+    // if (Platform.OS === 'android') {
+    //   Notifications.setNotificationChannelAsync('default', {
+    //     name: 'default',
+    //     importance: Notifications.AndroidImportance.MAX,
+    //     vibrationPattern: [0, 250, 250, 250],
+    //     lightColor: '#FF231F7C',
+    //   });
+    // }
+
+    return token;
+  }
+
+  if (isLoadingWelcome) {
+    return (
+      <NativeBaseProvider>
+        <NavigationContainer>
+          <Stack.Navigator>
+            <Stack.Screen
+              name="LoadingWelcome"
+              options={{
+                headerShown: false,
+              }}
+              component={LoadingWelcome}
+            />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </NativeBaseProvider>
+    );
+  }
+
   return (
     <NativeBaseProvider>
       <NavigationContainer>
-        {currentUser === null ? (
-          <Stack.Navigator
-            screenOptions={{
-              headerTitleAlign: 'center',
-              headerStyle: {
-                backgroundColor: '#1E96F0',
-              },
-              headerTintColor: '#fff',
-            }}
-          >
-            {isLoadingWelcome && (
-              <Stack.Screen
-                name="LoadingWelcome"
-                options={{
-                  headerShown: false,
-                }}
-                component={LoadingWelcome}
-              />
-            )}
-            <Stack.Screen
-              name="Register"
-              options={{
-                headerShown: false,
-              }}
-              component={Register}
-            />
-            <Stack.Screen
-              name="Login"
-              options={{
-                headerShown: false,
-              }}
-              component={Login}
-            />
-            <Stack.Screen
-              name="LoginPhone"
-              component={LoginPhone}
-              options={{
-                headerShown: false,
-              }}
-            />
-          </Stack.Navigator>
-        ) : (
-          <Tab.Navigator
-            screenOptions={{
-              // headerTitleAlign: 'center',
-              headerStyle: {
-                backgroundColor: '#1E96F0',
-              },
-              headerTintColor: '#fff',
-              tabBarStyle: {
-                height: 60,
-                paddingBottom: 5,
-                paddingTop: 5,
-              },
-              tabBarLabelStyle: {
-                fontWeight: 'bold',
-              },
-            }}
-          >
-            <Tab.Screen
-              name="Home"
-              component={Home}
-              options={{
-                title: 'Trang Chủ',
-                tabBarIcon: ({ focused }) => (
-                  <Icon
-                    as={<Ionicons name={focused ? 'home' : 'home-outline'} />}
-                    color={focused ? 'info.500' : 'muted.400'}
-                    size={28}
-                  />
-                ),
-              }}
-            />
-            <Tab.Screen
-              name="User"
-              component={User}
-              options={{
-                title: 'Cá Nhân',
-                tabBarIcon: ({ focused }) => (
-                  <Icon
-                    as={<Ionicons name={focused ? 'person' : 'person-outline'} />}
-                    color={focused ? 'info.500' : 'muted.400'}
-                    size={28}
-                  />
-                ),
-              }}
-            />
-            {/* <Tab.Screen name="Settings" component={SettingsScreen} /> */}
-          </Tab.Navigator>
-        )}
+        {isNotLogIn ? <AuthNavigator /> : <AppTabNavigator />}
       </NavigationContainer>
     </NativeBaseProvider>
   );

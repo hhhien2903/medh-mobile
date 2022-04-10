@@ -1,4 +1,3 @@
-import { View, Text } from 'react-native';
 import React from 'react';
 import medHLogo from '../assets/images/med-h-logo.png';
 import { Center, Heading, HStack, Image, VStack } from 'native-base';

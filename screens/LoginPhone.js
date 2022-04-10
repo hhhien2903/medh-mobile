@@ -1,5 +1,5 @@
 import { Keyboard } from 'react-native';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   Button,
   Center,
@@ -12,6 +12,7 @@ import {
   Image,
   HStack,
   KeyboardAvoidingView,
+  AlertDialog,
 } from 'native-base';
 import { AntDesign } from '@expo/vector-icons';
 import medHLogo from '../assets/images/med-h-logo.png';
@@ -20,7 +21,8 @@ import { firebaseApp, OAuthConfig } from '../config/firebase';
 import { useNavigation } from '@react-navigation/native';
 import firebase from 'firebase';
 import { useToast } from 'native-base';
-
+import Spinner from 'react-native-loading-spinner-overlay';
+import sharedStore from '../store/sharedStore';
 const LoginPhone = () => {
   const recaptchaVerifier = useRef();
   // const [phoneNumber, setPhoneNumber] = useState();
@@ -31,6 +33,14 @@ const LoginPhone = () => {
   const navigation = useNavigation();
 
   const toast = useToast();
+  const {
+    isLoadingSpinnerOverLay,
+    setIsLoadingSpinnerOverLay,
+    setIsShowRegisterSuccessfulAlert,
+    isNotRegistered,
+    setIsNotRegistered,
+    isShowRegisterSuccessfulAlert,
+  } = sharedStore((state) => state);
 
   const validateForm = (validateField) => {
     switch (validateField) {
@@ -117,14 +127,20 @@ const LoginPhone = () => {
       return;
     }
     try {
+      setIsLoadingSpinnerOverLay(true);
       const credential = firebase.auth.PhoneAuthProvider.credential(
         verificationId,
         formData.OTPCode
       );
-      await firebaseApp.auth().signInWithCredential(credential);
-      console.log('login success');
+      await firebaseApp
+        .auth()
+        .signInWithCredential(credential)
+        .then((value) => {
+          setIsLoadingSpinnerOverLay(false);
+        });
     } catch (err) {
       console.log(err);
+      setIsLoadingSpinnerOverLay(false);
       await toast.closeAll();
       toast.show({
         title: 'Mã OTP không đúng!',
@@ -135,8 +151,43 @@ const LoginPhone = () => {
       });
     }
   };
+
+  const goBackToLoginScreen = () => {
+    firebaseApp.auth().signOut();
+    setIsNotRegistered(false);
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
+  useEffect(() => {
+    if (isNotRegistered) {
+      console.log('login nhung chua dang ky ne');
+      navigation.navigate('Register');
+    }
+  }, [isNotRegistered]);
+
   return (
     <KeyboardAvoidingView behavior="position">
+      <Spinner visible={isLoadingSpinnerOverLay} />
+      <AlertDialog isOpen={isShowRegisterSuccessfulAlert}>
+        <AlertDialog.Content>
+          <AlertDialog.Header>Đăng Ký Thông Tin Thành Công</AlertDialog.Header>
+          <AlertDialog.Body>
+            Bạn đã đăng ký thông tin thành công. Người quản lý sẽ xem xét đơn đăng ký của bạn, hãy
+            đăng nhập lại ứng dụng sau khi bạn nhận được email xác nhận của chúng tôi. Cảm ơn.
+          </AlertDialog.Body>
+          <AlertDialog.Footer>
+            <Button
+              colorScheme="success"
+              onPress={() => {
+                setIsShowRegisterSuccessfulAlert(false);
+                goBackToLoginScreen();
+              }}
+            >
+              Đồng Ý
+            </Button>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog>
       <Box safeArea p="2">
         <FirebaseRecaptchaVerifierModal
           ref={recaptchaVerifier}
@@ -205,10 +256,7 @@ const LoginPhone = () => {
             bg="trueGray.300"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
-            onPress={() => {
-              navigation.goBack();
-              // navigation.navigate('Login');
-            }}
+            onPress={goBackToLoginScreen}
           >
             Quay lại
           </Button>

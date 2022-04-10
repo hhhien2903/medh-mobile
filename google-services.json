@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "922464656074",
+    "project_id": "medh-firebase",
+    "storage_bucket": "medh-firebase.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:922464656074:android:0b0f106c945dffb1047233",
+        "android_client_info": {
+          "package_name": "medh.mobile"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "922464656074-g7u3iktcm9qmg45vcg6mf0o1ejm0ji4q.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUvR7hdMiBH0SpkwsN7e2GmcMid8qspf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "922464656074-g7u3iktcm9qmg45vcg6mf0o1ejm0ji4q.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

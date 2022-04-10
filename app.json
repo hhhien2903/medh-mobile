@@ -28,21 +28,12 @@
           "apiKey": "AIzaSyB19JIqtPITMGcaZMHBFJ7FrWw-S-pjQMA",
           "certificateHash": "2F8691F6133AF6E18A5B4D4986CF416B663AC042"
         }
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      [
-        "onesignal-expo-plugin",
-        {
-          "mode": "development"
-        }
-      ]
-    ],
-    "extra": {
-      "oneSignalAppId": "c06aa8f4-562c-4a2e-aa5c-5c3a529a3ec9"
-    }
+    "plugins": []
   }
 }
