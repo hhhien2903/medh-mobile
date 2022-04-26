@@ -26,7 +26,7 @@ const CameraScreen = () => {
         let photo = await cameraRef.current.takePictureAsync({ quality: 0 });
 
         const manipResult = await manipulateAsync(photo.uri, [
-          // { resize: { width: 500, height: 500 } },
+          { resize: { width: 500, height: 500 } },
         ]);
         const uploadAvatarForm = new FormData();
 
