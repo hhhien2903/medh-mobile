@@ -20,7 +20,6 @@ import * as Google from 'expo-google-app-auth';
 import firebase from 'firebase';
 import { useNavigation } from '@react-navigation/native';
 import sharedStore from '../store/sharedStore';
-import Spinner from 'react-native-loading-spinner-overlay';
 
 export const Login = () => {
   const navigation = useNavigation();
@@ -105,7 +104,6 @@ export const Login = () => {
 
   return (
     <Center mt={140}>
-      <Spinner visible={isLoadingSpinnerOverLay} />
       <AlertDialog isOpen={isShowRegisterSuccessfulAlert}>
         <AlertDialog.Content>
           <AlertDialog.Header>Đăng Ký Thông Tin Thành Công</AlertDialog.Header>
@@ -129,9 +127,9 @@ export const Login = () => {
 
       <AlertDialog isOpen={isShowDisabledAlert}>
         <AlertDialog.Content>
-          <AlertDialog.Header>Tài Khoản Của Bạn Đã Bị Khoá</AlertDialog.Header>
+          <AlertDialog.Header>Tài Khoản Bị Vô Hiệu Hoá</AlertDialog.Header>
           <AlertDialog.Body>
-            Tài Khoản của bạn đã bị khoá. Vui lòng liên hệ quản trị viên.
+            Tài Khoản của bạn đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.
           </AlertDialog.Body>
           <AlertDialog.Footer>
             <Button

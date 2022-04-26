@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Home from './Patient';
-import User from './User';
+import Home from '../Patient';
+import User from '../User';
 import { Icon } from 'native-base';
 import { Ionicons } from '@expo/vector-icons';
-import PatientStackNavigator from './PatientStackNavigator';
+import Patient from '../Patient';
 
 const Tab = createBottomTabNavigator();
 
@@ -30,10 +30,10 @@ const AppTabNavigator = () => {
     >
       <Tab.Screen
         name="PatientTab"
-        component={PatientStackNavigator}
+        component={Patient}
         options={{
           title: 'Bệnh Nhân',
-          headerShown: false,
+          // headerShown: false,
           tabBarIcon: ({ focused }) => (
             <Icon
               as={<Ionicons name={focused ? 'people-circle' : 'people-circle-outline'} />}

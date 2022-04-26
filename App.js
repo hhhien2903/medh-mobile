@@ -1,21 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Login from './screens/Login';
-import { Icon, NativeBaseProvider } from 'native-base';
-import LoginPhone from './screens/LoginPhone';
-import sharedStore from './store/sharedStore';
-import { firebaseApp } from './config/firebase';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import LoadingWelcome from './screens/LoadingWelcome';
-import Register from './screens/Register';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import { NativeBaseProvider } from 'native-base';
+import React, { useEffect, useState } from 'react';
+import 'react-native-gesture-handler';
 import doctorAPI from './api/doctorAPI';
-import AuthNavigator from './screens/AuthNavigator';
-import AppTabNavigator from './screens/AppTabNavigator';
+import { firebaseApp } from './config/firebase';
+import LoadingWelcome from './screens/LoadingWelcome';
+import AuthNavigator from './screens/navigator/AuthNavigator';
+import AppStackNavigator from './screens/navigator/AppStackNavigator';
+import sharedStore from './store/sharedStore';
+import pushDeviceAPI from './api/pushDeviceAPI';
 // Define the config
 // const config = {
 //   useSystemColorMode: false,
@@ -25,8 +21,7 @@ import AppTabNavigator from './screens/AppTabNavigator';
 // extend the theme
 // export const theme = extendTheme({ config });
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -40,8 +35,8 @@ export default function App() {
   const {
     currentUser,
     setCurrentUser,
-    tokenTest,
-    setTokenTest,
+    tokenPushDevice,
+    setTokenPushDevice,
     setIsNotRegistered,
     setIsShowRegisterSuccessfulAlert,
     setIsShowDisabledAlert,
@@ -79,14 +74,28 @@ export default function App() {
         }
         if (doctorData.isActive === true) {
           console.log('login va da active');
+          await setCurrentUser(doctorData);
+
+          const sendPushDeviceData = {
+            clientId: tokenPushDevice,
+            platform: 'app',
+            doctorId: doctorData.id,
+          };
+          await pushDeviceAPI.register(sendPushDeviceData);
           setIsNotLogIn(false);
-          setCurrentUser(doctorData);
         }
       } catch (error) {
+        // Đăng nhập thành công nhưng chưa đăng ký
         if (error.status === 500) {
-          console.log('chay ne');
+          console.log('đẩy qua register');
           setIsNotRegistered(true);
         }
+        //Đăng nhập thành công, đã đăng ký, đã gửi push token
+        if (error.status === 409) {
+          setIsNotLogIn(false);
+        }
+        console.log(error);
+        setIsNotLogIn(false);
       }
     });
     return () => {
@@ -96,7 +105,7 @@ export default function App() {
 
   useEffect(() => {
     registerForPushNotificationsAsync().then((token) => {
-      setTokenTest(token);
+      setTokenPushDevice(token);
     });
   }, []);
 
@@ -152,7 +161,7 @@ export default function App() {
   return (
     <NativeBaseProvider>
       <NavigationContainer>
-        {isNotLogIn ? <AuthNavigator /> : <AppTabNavigator />}
+        {isNotLogIn ? <AuthNavigator /> : <AppStackNavigator />}
       </NavigationContainer>
     </NativeBaseProvider>
   );

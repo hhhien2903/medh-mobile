@@ -21,7 +21,6 @@ import { firebaseApp, OAuthConfig } from '../config/firebase';
 import { useNavigation } from '@react-navigation/native';
 import firebase from 'firebase';
 import { useToast } from 'native-base';
-import Spinner from 'react-native-loading-spinner-overlay';
 import sharedStore from '../store/sharedStore';
 const LoginPhone = () => {
   const recaptchaVerifier = useRef();
@@ -167,7 +166,6 @@ const LoginPhone = () => {
 
   return (
     <KeyboardAvoidingView behavior="position">
-      <Spinner visible={isLoadingSpinnerOverLay} />
       <AlertDialog isOpen={isShowRegisterSuccessfulAlert}>
         <AlertDialog.Content>
           <AlertDialog.Header>Đăng Ký Thông Tin Thành Công</AlertDialog.Header>

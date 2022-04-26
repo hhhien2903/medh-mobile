@@ -1,13 +1,13 @@
-import { Avatar, Box, FlatList, Spacer, HStack, VStack, Stack } from 'native-base';
-import React from 'react';
+import { Avatar, Box, FlatList, Spacer, HStack, VStack, Stack, Pressable } from 'native-base';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Button } from 'react-native';
-import { firebaseApp } from '../config/firebase';
 import ActionButton from 'react-native-circular-action-menu';
 import sharedStore from '../store/sharedStore';
-import { useNavigation } from '@react-navigation/native';
+import doctorAPI from '../api/doctorAPI';
 const Patient = ({ navigation }) => {
   const { currentUser } = sharedStore((state) => state);
   // const navigation = useNavigation();
+  const [monitoringPatientsSource, setMonitoringPatientsSource] = useState([]);
   const dataTest = [
     {
       id: 4,
@@ -49,6 +49,7 @@ const Patient = ({ navigation }) => {
       districtId: 588,
       wardId: 20999,
       temp: 38,
+      status: 1,
       avatarUrl: 'https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png',
     },
     {
@@ -70,67 +71,98 @@ const Patient = ({ navigation }) => {
       cityId: 36,
       districtId: 588,
       wardId: 20992,
+      status: 2,
       avatarUrl: 'https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png',
     },
   ];
+
+  const getBackgroundStatus = (status) => {
+    if (status === 1) {
+      return {
+        backgroundColor: '#a1e887',
+      };
+    }
+    if (status === 2) {
+      return {
+        backgroundColor: '#f08080',
+      };
+    }
+  };
+
+  const getAllMonitoringPatient = async () => {
+    try {
+      const monitoringPatientsResult = await doctorAPI.getAllMonitoringPatient(currentUser.id);
+      setMonitoringPatientsSource(monitoringPatientsResult);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    getAllMonitoringPatient();
+  }, []);
+
   return (
     <View style={{ height: '100%' }}>
-      <Button title="Test" onPress={() => navigation.navigate('PatientDetail')}></Button>
       <FlatList
         data={dataTest}
         renderItem={({ item }) => (
-          <Box
-            borderBottomWidth="1"
-            _dark={{
-              borderColor: 'gray.600',
-            }}
-            borderColor="coolGray.200"
-            height="20"
-            pl="4"
-            pr="5"
-            py="2"
-          >
-            <HStack space={3} justifyContent="space-between" alignItems="center" height="100%">
-              <Avatar
-                size="48px"
-                source={{
-                  uri: item.avatarUrl,
-                }}
-              />
-              <VStack>
+          <Pressable onPress={() => navigation.navigate('PatientDetail', { id: item.id })}>
+            <Box
+              borderBottomWidth="1"
+              _dark={{
+                borderColor: 'gray.600',
+              }}
+              borderColor="coolGray.200"
+              height="20"
+              pl="4"
+              pr="5"
+              py="2"
+              key={item.id}
+              style={getBackgroundStatus(item.status)}
+            >
+              <HStack space={3} justifyContent="space-between" alignItems="center" height="100%">
+                <Avatar
+                  size="48px"
+                  source={{
+                    uri: item.avatarUrl,
+                  }}
+                />
+                <VStack>
+                  <Text
+                    _dark={{
+                      color: 'warmGray.50',
+                    }}
+                    color="coolGray.800"
+                    bold
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    color="coolGray.600"
+                    _dark={{
+                      color: 'warmGray.200',
+                    }}
+                  >
+                    Nhiệt độ: {item.temp} °C
+                  </Text>
+                </VStack>
+                <Spacer />
                 <Text
+                  fontSize="xs"
                   _dark={{
                     color: 'warmGray.50',
                   }}
                   color="coolGray.800"
-                  bold
+                  alignSelf="flex-start"
                 >
-                  {item.name}
+                  {item.timeStamp}
                 </Text>
-                <Text
-                  color="coolGray.600"
-                  _dark={{
-                    color: 'warmGray.200',
-                  }}
-                >
-                  Nhiệt độ: {item.temp} °C
-                </Text>
-              </VStack>
-              <Spacer />
-              <Text
-                fontSize="xs"
-                _dark={{
-                  color: 'warmGray.50',
-                }}
-                color="coolGray.800"
-                alignSelf="flex-start"
-              >
-                {item.timeStamp}
-              </Text>
-            </HStack>
-          </Box>
+              </HStack>
+            </Box>
+          </Pressable>
         )}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
       />
       <View style={{ position: 'absolute', bottom: 25, right: 60 }}>
         <ActionButton

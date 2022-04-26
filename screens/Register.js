@@ -77,6 +77,9 @@ const Register = () => {
   }, []);
 
   const handleClickRegister = async () => {
+    if (!validateForm('phoneNumberField')) {
+      return;
+    }
     // console.log(formRegisterData);
     try {
       const data = {
@@ -92,7 +95,7 @@ const Register = () => {
       if (error.status === 400) {
         toast.show({
           title: 'Đăng Ký Không Thành Công.',
-          status: 'warning',
+          // status: 'warning',
           placement: 'top',
           description:
             'Email/SĐT của bạn đã từng được đăng ký trước đây, hãy bấm nút Quay Lại và tiến hành đăng nhập lại.',
@@ -116,7 +119,7 @@ const Register = () => {
             ĐĂNG KÝ TÀI KHOẢN
           </Heading>
         </VStack>
-        <VStack space={5} px={8} mt="25px">
+        <VStack space={2} px={8} mt="20px">
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Họ Và Tên:</FormControl.Label>
             <Input
@@ -250,8 +253,8 @@ const Register = () => {
             Đăng Ký
           </Button>
           <Button
-            mt="5"
-            bg="trueGray.300"
+            mt="2"
+            bg="warmGray.500"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
             onPress={goBackToLoginScreen}
