@@ -75,13 +75,24 @@ export default function App() {
         if (doctorData.isActive === true) {
           console.log('login va da active');
           await setCurrentUser(doctorData);
+          registerForPushNotificationsAsync().then(async (token) => {
+            setTokenPushDevice(token);
+            const sendPushDeviceData = {
+              clientId: token,
+              platform: 'app',
+              doctorId: doctorData.id,
+            };
+            try {
+              await pushDeviceAPI.register(sendPushDeviceData);
+            } catch (error) {
+              if (error.status === 409) {
+                console.log('chay neee');
+                setIsNotLogIn(false);
+                return;
+              }
+            }
+          });
 
-          const sendPushDeviceData = {
-            clientId: tokenPushDevice,
-            platform: 'app',
-            doctorId: doctorData.id,
-          };
-          await pushDeviceAPI.register(sendPushDeviceData);
           setIsNotLogIn(false);
         }
       } catch (error) {
@@ -91,11 +102,6 @@ export default function App() {
           setIsNotRegistered(true);
         }
         //Đăng nhập thành công, đã đăng ký, đã gửi push token
-        if (error.status === 409) {
-          setIsNotLogIn(false);
-        }
-        console.log(error);
-        setIsNotLogIn(false);
       }
     });
     return () => {
@@ -103,11 +109,11 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => {
-      setTokenPushDevice(token);
-    });
-  }, []);
+  // useEffect(() => {
+  //   registerForPushNotificationsAsync().then((token) => {
+  //     setTokenPushDevice(token);
+  //   });
+  // }, []);
 
   async function registerForPushNotificationsAsync() {
     let token;
