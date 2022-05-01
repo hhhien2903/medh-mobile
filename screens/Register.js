@@ -77,9 +77,9 @@ const Register = () => {
   }, []);
 
   const handleClickRegister = async () => {
-    if (!validateForm('phoneNumberField')) {
-      return;
-    }
+    // if (!validateForm('phoneNumberField')) {
+    //   return;
+    // }
     // console.log(formRegisterData);
     try {
       const data = {
@@ -105,6 +105,7 @@ const Register = () => {
   };
 
   const goBackToLoginScreen = () => {
+    setIsShowRegisterSuccessfulAlert(false);
     firebaseApp.auth().signOut();
     setIsNotRegistered(false);
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });

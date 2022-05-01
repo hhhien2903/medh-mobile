@@ -64,29 +64,30 @@ export default function App() {
         if (phoneNumber) {
           phoneNumber = '0' + phoneNumber.substring(3);
         }
-        const doctorData = await doctorAPI.checkAccountRegistered(phoneNumber, email);
-        if (doctorData.isActive === false) {
+        const checkDoctorExistResult = await doctorAPI.checkAccountRegistered(phoneNumber, email);
+        if (checkDoctorExistResult.isActive === false) {
           setIsShowRegisterSuccessfulAlert(true);
         }
-        if (doctorData.isDisabled === true) {
+        if (checkDoctorExistResult.isDisabled === true) {
           setIsShowDisabledAlert(true);
           return;
         }
-        if (doctorData.isActive === true) {
+        if (checkDoctorExistResult.isActive === true) {
           console.log('login va da active');
-          await setCurrentUser(doctorData);
+          const doctorDataResult = await doctorAPI.getDoctorByDoctorId(checkDoctorExistResult.id);
+          await setCurrentUser(doctorDataResult);
           registerForPushNotificationsAsync().then(async (token) => {
             setTokenPushDevice(token);
             const sendPushDeviceData = {
               clientId: token,
               platform: 'app',
-              doctorId: doctorData.id,
+              doctorId: doctorDataResult.id,
             };
             try {
               await pushDeviceAPI.register(sendPushDeviceData);
             } catch (error) {
               if (error.status === 409) {
-                console.log('chay neee');
+                console.log('đã push token');
                 setIsNotLogIn(false);
                 return;
               }
@@ -97,23 +98,22 @@ export default function App() {
         }
       } catch (error) {
         // Đăng nhập thành công nhưng chưa đăng ký
-        if (error.status === 500) {
+
+        if (error.status === 404) {
           console.log('đẩy qua register');
           setIsNotRegistered(true);
+          return;
         }
-        //Đăng nhập thành công, đã đăng ký, đã gửi push token
+        //Server sập
+        if (error.status === 500) {
+          return;
+        }
       }
     });
     return () => {
       unsubscribed();
     };
   }, []);
-
-  // useEffect(() => {
-  //   registerForPushNotificationsAsync().then((token) => {
-  //     setTokenPushDevice(token);
-  //   });
-  // }, []);
 
   async function registerForPushNotificationsAsync() {
     let token;
