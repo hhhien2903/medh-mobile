@@ -1,9 +1,44 @@
-import { StyleSheet, Text, View, Dimensions } from 'react-native';
-import React from 'react';
-import { HStack, VStack, Box, Divider, Button, ScrollView } from 'native-base';
+import { StyleSheet, View, Dimensions } from 'react-native';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
+import {
+  HStack,
+  VStack,
+  Box,
+  Divider,
+  Button,
+  ScrollView,
+  IconButton,
+  Select,
+  CheckIcon,
+  Modal,
+  Input,
+  FormControl,
+  TextArea,
+  Text,
+  useToast,
+} from 'native-base';
 import { LineChart } from 'react-native-chart-kit';
+import moment from 'moment';
+import medicalRecordAPI from '../api/medicalRecordAPI';
+import sharedStore from '../store/sharedStore';
+import Chart from '../components/Chart';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { useNavigation } from '@react-navigation/native';
+
 const PatientDetail = (props) => {
-  const { id } = props.route.params;
+  const { medicalRecordId } = props.route.params;
+  const {
+    setIsLoadingSpinnerOverLay,
+    isShowEndMedicalRecord,
+    setIsShowEndMedicalRecord,
+    setSelectedMedicalRecordDetail,
+  } = sharedStore((state) => state);
+  const [medicalRecordSource, setMedicalRecordSource] = useState({});
+  const [medicalReportSource, setMedicalReportSource] = useState([]);
+  const [listTempDateChart, setListTempDateChart] = useState([]);
+  const toast = useToast();
+  const navigation = useNavigation();
   const tempTestData = [
     {
       date: '18/04/2022',
@@ -92,33 +127,174 @@ const PatientDetail = (props) => {
     // },
   ];
 
-  return (
-    <View>
-      <Box padding={2}>
-        <VStack
-          divider={<Divider w="96%" ml="2%" bg="muted.50" />}
-          borderRadius="md"
-          backgroundColor="darkBlue.200"
-        >
-          <HStack py="4" px="5" justifyContent="space-between">
-            <Text style={style.title}>Họ Và Tên:</Text>
-            <Text style={style.content}>Gleda</Text>
-          </HStack>
-          <HStack py="4" px="5" justifyContent="space-between">
-            <Text style={style.title}>Ngày Sinh:</Text>
-            <Text style={style.content}>29/01/2000</Text>
-          </HStack>
-          <HStack py="4" px="5" justifyContent="space-between">
-            <Text style={style.title}>Tuổi:</Text>
-            <Text style={style.content}>22</Text>
-          </HStack>
-          <HStack py="4" px="5" justifyContent="space-between">
-            <Text style={style.title}>Bệnh Điều Trị:</Text>
-            <Text style={style.content}>COVID-19</Text>
-          </HStack>
-        </VStack>
+  const getMedicalRecordDetail = async () => {
+    try {
+      setIsLoadingSpinnerOverLay(true);
+      const medicalRecordResult = await medicalRecordAPI.getMedicalRecordById(medicalRecordId);
+      setMedicalRecordSource(medicalRecordResult);
+      setSelectedMedicalRecordDetail(medicalRecordResult);
+      setIsLoadingSpinnerOverLay(false);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-        {/* <HStack padding={2}>
+  const getMedicalReportChart = async () => {
+    try {
+      const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
+        medicalRecordId
+      );
+      setMedicalReportSource(medicalReportResult);
+      const filteredDates = medicalReportResult
+        .map((temp) => moment(temp.date).format('DD/MM/YYYY'))
+        .filter((date, index, arrayDate) => arrayDate.indexOf(date) === index);
+      setListTempDateChart(filteredDates);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleSelectDateChart = (value) => {};
+
+  useLayoutEffect(() => {
+    getMedicalRecordDetail();
+    getMedicalReportChart();
+  }, []);
+
+  const formik = useFormik({
+    initialValues: {
+      conclude: '',
+    },
+    validationSchema: Yup.object({
+      conclude: Yup.string().required('Kết Luận không được để trống!'),
+    }),
+
+    onSubmit: (form) => {
+      handleEndMedicalRecord(form);
+    },
+  });
+
+  const handleEndMedicalRecord = async (form) => {
+    try {
+      let sendData = {
+        medicalRecordId: medicalRecordId,
+        conclude: form.conclude,
+      };
+      await medicalRecordAPI.endFollowMedicalRecord(sendData);
+      toast.show({
+        placement: 'top',
+        render: () => {
+          return (
+            <Box bg="success.500" px="4" py="4" rounded="sm">
+              <Text fontWeight={'bold'} color={'white'}>
+                Thao tác thành công.
+              </Text>
+            </Box>
+          );
+        },
+      });
+      setIsShowEndMedicalRecord(false);
+      navigation.goBack();
+    } catch (error) {
+      console.log(error);
+      toast.show({
+        placement: 'top',
+        render: () => {
+          return (
+            <Box bg="warmGray.400" px="4" py="4" rounded="sm">
+              <Text fontWeight={'bold'} color={'white'}>
+                Thao tác không thành công. Hãy thử lại sau.
+              </Text>
+            </Box>
+          );
+        },
+      });
+    }
+  };
+
+  return (
+    <ScrollView>
+      <View>
+        <Box padding={2}>
+          <VStack
+            divider={<Divider w="96%" ml="2%" bg={'white'} />}
+            borderRadius="md"
+            backgroundColor="darkBlue.200"
+            // bg={{
+            //   linearGradient: {
+            //     colors: ['#5691c8', '#457fca'],
+            //     start: [0, 0],
+            //     end: [1, 0],
+            //   },
+            // }}
+          >
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Họ Và Tên:</Text>
+              <Text
+                style={style.content}
+              >{`${medicalRecordSource?.patient?.surname} ${medicalRecordSource?.patient?.name}`}</Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Ngày Sinh:</Text>
+              <Text style={style.content}>
+                {moment(medicalRecordSource?.patient?.dateOfBirth).format('DD/MM/YYYY')}
+              </Text>
+            </HStack>
+            {/* <HStack py="3" px="5" justifyContent="space-between">
+            <Text style={style.title}>Tuổi:</Text>
+            <Text style={style.content}>
+              {moment().diff(medicalRecordSource?.patient?.dateOfBirth, 'years')}
+            </Text>
+          </HStack> */}
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Bệnh Điều Trị:</Text>
+              <Text style={style.content}>{medicalRecordSource?.diseases?.name}</Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Chuẩn Đoán:</Text>
+              <Text style={style.content}>{medicalRecordSource?.diagnose}</Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Ngày Bắt Đầu:</Text>
+              <Text style={style.content}>
+                {moment(medicalRecordSource?.createdAt).format('DD/MM/YYYY')}
+              </Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Ngày Kết Thúc:</Text>
+              <Text style={style.content}>
+                {medicalRecordSource.treated
+                  ? moment(medicalRecordSource?.updatedAt).format('DD/MM/YYYY')
+                  : 'Chưa có.'}
+              </Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Thiết Bị:</Text>
+              <Text style={style.content}>
+                {medicalRecordSource?.medicalRecordDevice?.device?.name}
+              </Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>MAC Thiết Bị:</Text>
+              <Text style={style.content}>
+                {medicalRecordSource?.medicalRecordDevice?.device?.macAddress}
+              </Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Kết Luận:</Text>
+              <Text style={style.content}>
+                {medicalRecordSource?.conclude ? medicalRecordSource?.conclude : 'Chưa có.'}
+              </Text>
+            </HStack>
+            <HStack py="3" px="5" justifyContent="space-between">
+              <Text style={style.title}>Tình Trạng:</Text>
+              <Text style={style.content}>
+                {medicalRecordSource?.treated ? 'Đã Kết Thúc' : 'Đang Điều Trị'}
+              </Text>
+            </HStack>
+          </VStack>
+
+          {/* <HStack padding={2}>
             <Box border="5" borderRadius="md" backgroundColor="red.400">
               <VStack space="2" divider={<Divider />}>
                 <Box px="4" pt="4">
@@ -131,13 +307,34 @@ const PatientDetail = (props) => {
 
               </VStack>
             </Box> */}
-      </Box>
-      {/* <View style={{ paddingLeft: 8, paddingRight: 8 }}>
+        </Box>
+        {/* <View style={{ paddingLeft: 8, paddingRight: 8 }}>
         <Button background="#1E96F0">Xem Biểu Đồ</Button>
       </View> */}
-      <View>
-        <ScrollView>
-          <Box style={{ display: 'flex', justifyContent: 'center', flexDirection: 'row' }}>
+        <Divider my={2} w="96%" ml="2%" height={0.5} />
+        <View style={{ paddingTop: 0 }}>
+          <HStack justifyContent="flex-end" pr={2} mb={3} mt={1}>
+            <Select
+              height="10"
+              borderWidth={2}
+              borderColor="gray.300"
+              placeholder="Chọn Ngày"
+              borderRadius={8}
+              w="150"
+              _selectedItem={{
+                endIcon: <CheckIcon size={5} />,
+              }}
+              // defaultValue={formData?.gender}
+              fontSize={16}
+              onValueChange={handleSelectDateChart}
+            >
+              {/* {listTempDateChart.map()} */}
+              <Select.Item label="03/05/2022" value={true} />
+              {/* <Select.Item label="Nữ" value={false} /> */}
+            </Select>
+          </HStack>
+
+          <Box style={{ display: 'flex', justifyContent: 'center', flexDirection: 'row' }} mb={5}>
             <LineChart
               data={{
                 labels: tempTestData?.map((temp) => temp.hour),
@@ -148,7 +345,7 @@ const PatientDetail = (props) => {
                 ],
               }}
               width={Dimensions.get('window').width - 15} // from react-native
-              height={220}
+              height={250}
               // yAxisLabel="°C"
               yAxisSuffix="°C"
               yAxisInterval={1} // optional, defaults to 1
@@ -176,10 +373,45 @@ const PatientDetail = (props) => {
                 borderRadius: 10,
               }}
             />
+            {/* <Chart xKey="hour" y="temp" chartPrices={tempTestData} /> */}
           </Box>
-        </ScrollView>
+
+          <Modal
+            isOpen={isShowEndMedicalRecord}
+            onClose={() => {
+              setIsShowEndMedicalRecord(false);
+              formik.resetForm();
+            }}
+          >
+            <Modal.Content maxWidth="400px">
+              <Modal.CloseButton />
+              <Modal.Header>Kết Thúc Bệnh Án</Modal.Header>
+              <Modal.Body>
+                <FormControl>
+                  {/* <FormControl.Label>Mã Bệnh Án</FormControl.Label> */}
+                  <TextArea
+                    // borderColor={'gray.900'}
+                    h={150}
+                    value={formik.values.conclude}
+                    placeholder="Vui lòng nhập Kết luận:"
+                    fontSize={15}
+                    onChangeText={(value) => formik.setFieldValue('conclude', value)}
+                  />
+                  {formik.errors.conclude && (
+                    <Text color="danger.500">{formik.errors.conclude}</Text>
+                  )}
+                </FormControl>
+              </Modal.Body>
+              <Modal.Footer>
+                <Button.Group space={2}>
+                  <Button onPress={formik.handleSubmit}>Đồng Ý</Button>
+                </Button.Group>
+              </Modal.Footer>
+            </Modal.Content>
+          </Modal>
+        </View>
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -189,8 +421,13 @@ const style = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: 'bold',
+    maxWidth: '45%',
+    color: '#18181b',
   },
   content: {
+    textAlign: 'right',
+    maxWidth: '55%',
     fontSize: 16,
+    color: '#18181b',
   },
 });

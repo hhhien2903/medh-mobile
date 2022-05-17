@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import sharedStore from '../store/sharedStore';
-import { Camera } from 'expo-camera';
 import {
   Avatar,
   Box,
@@ -20,11 +19,11 @@ import {
   Image,
   AlertDialog,
   useToast,
+  Text,
 } from 'native-base';
 import moment from 'moment';
 import { firebaseApp } from '../config/firebase';
 import { Ionicons } from '@expo/vector-icons';
-import { Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import doctorAPI from '../api/doctorAPI';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,24 +31,32 @@ import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { AntDesign } from '@expo/vector-icons';
 import avatarDefault from '../assets/images/avatar_default.png';
-import medHLogo from '../assets/images/med-h-logo.png';
 import pushDeviceAPI from '../api/pushDeviceAPI';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
+import { vietnameseNameRegex } from '../utils/regex';
+import { RefreshControl } from 'react-native';
 
 const User = () => {
   const currentUser = sharedStore((state) => state.currentUser);
   const setCurrentUser = sharedStore((state) => state.setCurrentUser);
-  const { setIsLoadingSpinnerOverLay, tokenPushDevice } = sharedStore((state) => state);
-  const [formData, setFormData] = useState(currentUser);
+  const {
+    setIsLoadingSpinnerOverLay,
+    tokenPushDevice,
+    isVisibleAlertDialog,
+    setIsVisibleAlertDialog,
+    dialogUsedFor,
+    setDialogUsedFor,
+  } = sharedStore((state) => state);
   const navigation = useNavigation();
-  const [isVisibleAlertDialog, setIsVisibleAlertDialog] = useState(false);
-  const [dialogUsedFor, setDialogUsedFor] = useState(null);
   const [isShowDatePicker, setIsShowDatePicker] = useState(false);
   const toast = useToast();
+  const [isRefreshActive, setIsRefreshActive] = useState(false);
+  const scrollRef = useRef();
   const getCurrentUserInfo = async () => {
     try {
       setIsLoadingSpinnerOverLay(true);
       const userInfoResult = await doctorAPI.getDoctorByDoctorId(currentUser.id);
-      setFormData(userInfoResult);
       setCurrentUser(userInfoResult);
       setIsLoadingSpinnerOverLay(false);
     } catch (error) {
@@ -64,13 +71,22 @@ const User = () => {
       currentDate = new Date();
     }
     setIsShowDatePicker(false);
-    setFormData({ ...formData, dateOfBirth: currentDate });
+    // setFormData({ ...formData, dateOfBirth: currentDate });
+
+    formik.setFieldValue('dateOfBirth', currentDate);
   };
 
   const handleUpdateUser = async () => {
     try {
-      await doctorAPI.updateInfo(formData);
-      getCurrentUserInfo();
+      const sendData = {
+        name: formik.values.name,
+        gender: formik.values.gender,
+        dateOfBirth: formik.values.dateOfBirth,
+        id: formik.values.id,
+        hospital: formik.values.hospital.id,
+      };
+      await doctorAPI.updateInfo(sendData);
+      await getCurrentUserInfo();
       toast.show({
         title: 'Thao tác thành công.',
         placement: 'top',
@@ -96,7 +112,18 @@ const User = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      getCurrentUserInfo();
+      formik.setFieldValue('name', currentUser?.name);
+      formik.setFieldValue('mobile', currentUser?.mobile);
+      formik.setFieldValue('email', currentUser?.email);
+      formik.setFieldValue('gender', currentUser?.gender);
+      formik.setFieldValue('dateOfBirth', currentUser?.dateOfBirth);
+      formik.setFieldValue('cmnd', currentUser?.cmnd);
+      formik.setFieldValue('hospital', currentUser?.hospital);
+      formik.setFieldValue('id', currentUser?.id);
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: false,
+      });
     }, [])
   );
 
@@ -120,6 +147,7 @@ const User = () => {
 
         await doctorAPI.uploadAvatar(currentUser.id, uploadAvatarForm);
         getCurrentUserInfo();
+        toast.closeAll();
         toast.show({
           title: 'Thao tác thành công',
           placement: 'top',
@@ -154,113 +182,140 @@ const User = () => {
       });
   };
 
+  const formik = useFormik({
+    initialValues: {
+      name: currentUser?.name,
+      mobile: currentUser?.mobile,
+      email: currentUser?.email,
+      gender: currentUser?.gender,
+      dateOfBirth: currentUser?.dateOfBirth,
+      cmnd: currentUser?.cmnd,
+      hospital: currentUser?.hospital,
+      id: currentUser?.id,
+    },
+    validationSchema: Yup.object({
+      name: Yup.string()
+        .min(5, 'Họ Và Tên tối thiểu 5 ký tự trở lên.')
+        .matches(vietnameseNameRegex, 'Họ Và Tên không đúng định dạng.')
+        .required('Họ Và Tên không được để trống!'),
+    }),
+
+    onSubmit: (form) => {
+      // setFormData(form);
+      handleVisibleConfirmDialogUpdateInfo();
+    },
+  });
+
+  const handleRefresh = async () => {
+    setIsRefreshActive(true);
+    await getCurrentUserInfo();
+    setIsRefreshActive(false);
+  };
+
   return (
-    <ScrollView>
+    <ScrollView
+      ref={scrollRef}
+      refreshControl={<RefreshControl refreshing={isRefreshActive} onRefresh={handleRefresh} />}
+    >
       <Box safeArea>
         <HStack justifyContent="center" alignItems="center">
-          {currentUser?.avatar ? (
-            <Avatar
-              size="24"
-              source={{
-                uri: currentUser?.avatar,
-              }}
-            />
-          ) : (
-            <Image
-              size={24}
-              resizeMode={'contain'}
-              borderRadius={100}
-              source={avatarDefault}
-              alt="Alternate Text"
-            />
-          )}
+          <Box style={{ position: 'relative' }}>
+            {currentUser?.avatar ? (
+              <Avatar
+                size="24"
+                source={{
+                  uri: currentUser?.avatar,
+                }}
+              />
+            ) : (
+              <Image
+                size={24}
+                resizeMode={'contain'}
+                borderRadius={100}
+                source={avatarDefault}
+                alt="Alternate Text"
+              />
+            )}
 
-          <Menu
-            placement="bottom"
-            trigger={(triggerProps) => {
-              return (
-                <Box
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 50,
-                    backgroundColor: '#D5D1CB',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    // alignItems: 'center',
-                    position: 'absolute',
-                    bottom: -3,
-                    right: 160,
-                  }}
-                >
-                  <IconButton
-                    borderRadius="full"
-                    _pressed={{ bg: 'rgba(52, 52, 52, 0.2)' }}
-                    {...triggerProps}
-                    icon={<Icon as={<Ionicons name="camera" />} color="black" size={5} />}
-                  ></IconButton>
-                </Box>
-              );
-            }}
-          >
-            <Menu.Item onPress={() => navigation.navigate('CameraScreen')}>
-              <HStack>
-                <Icon as={<Ionicons name="camera-outline" color="black" />} size={5} />
-                <Text> Chụp ảnh</Text>
-              </HStack>
-            </Menu.Item>
-            <Menu.Item onPress={() => pickImage()}>
-              <HStack>
-                <Icon as={<Ionicons name="image-outline" color="black" />} size={5} />
-                <Text> Chọn ảnh từ Thư Viện</Text>
-              </HStack>
-            </Menu.Item>
-          </Menu>
+            <Menu
+              placement="bottom"
+              trigger={(triggerProps) => {
+                return (
+                  <Box
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 50,
+                      backgroundColor: '#D5D1CB',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                    }}
+                  >
+                    <IconButton
+                      borderRadius="full"
+                      _pressed={{ bg: 'rgba(52, 52, 52, 0.2)' }}
+                      {...triggerProps}
+                      icon={<Icon as={<Ionicons name="camera" />} color="black" size={5} />}
+                    ></IconButton>
+                  </Box>
+                );
+              }}
+            >
+              <Menu.Item onPress={() => navigation.navigate('CameraScreen')}>
+                <HStack>
+                  <Icon as={<Ionicons name="camera-outline" color="black" />} size={5} />
+                  <Text> Chụp ảnh</Text>
+                </HStack>
+              </Menu.Item>
+              <Menu.Item onPress={() => pickImage()}>
+                <HStack>
+                  <Icon as={<Ionicons name="image-outline" color="black" />} size={5} />
+                  <Text> Chọn ảnh từ Thư Viện</Text>
+                </HStack>
+              </Menu.Item>
+            </Menu>
+          </Box>
         </HStack>
-        <VStack space={3} px={5} mt="3">
+        <VStack space={2} px={5} mt="3">
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 15 }}>Họ Và Tên:</FormControl.Label>
             <Input
               borderColor="gray.500"
-              // InputLeftElement={
-              //   <Icon as={<AntDesign name="mobile1" />} size={5} ml="2" color="muted.400" />
-              // }
               placeholder="Họ Và Tên"
               fontSize={16}
               height="10"
-              value={formData?.name}
-              // onChange={(value) => setFormData({ ...formData, name: value })}
-              onChangeText={(value) => setFormData({ ...formData, name: value })}
+              onChangeText={formik.handleChange('name')}
+              onBlur={formik.handleBlur('name')}
+              value={formik.values.name}
             />
+            {formik.errors.name && <Text color="danger.500">{formik.errors.name}</Text>}
           </FormControl>
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 15 }}>Số Điện Thoại:</FormControl.Label>
             <Input
               borderColor="gray.500"
-              // InputLeftElement={
-              //   <Icon as={<AntDesign name="mobile1" />} size={5} ml="2" color="muted.400" />
-              // }
               isReadOnly="true"
               placeholder="Số Điện Thoại"
               fontSize={16}
               height="10"
-              value={currentUser?.mobile}
+              value={formik.values?.mobile}
               backgroundColor="#DCDCDC"
+              onChangeText={formik.handleChange('mobile')}
               // onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
             />
           </FormControl>
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Email:</FormControl.Label>
             <Input
-              // InputLeftElement={
-              //   <Icon as={<AntDesign name="mobile1" />} size={5} ml="2" color="muted.400" />
-              // }
               borderColor="gray.500"
               isReadOnly="true"
               placeholder="Email"
               fontSize={16}
               height="10"
-              value={currentUser?.email}
+              value={formik.values?.email}
               backgroundColor="#DCDCDC"
               // onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
             />
@@ -273,29 +328,28 @@ const User = () => {
               accessibilityLabel="Giới Tính"
               placeholder="Giới Tính"
               _selectedItem={{
-                bg: 'teal.600',
+                bg: 'blue.300',
+                borderRadius: '5',
                 endIcon: <CheckIcon size={5} />,
               }}
-              defaultValue={formData?.gender}
+              _item={{ _pressed: { bg: 'gray.400', borderRadius: '5' }, mb: 1 }}
               fontSize={16}
-              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+              selectedValue={formik.values?.gender}
+              onValueChange={(value) => formik.setFieldValue('gender', value)}
             >
               <Select.Item label="Nam" value={true} />
               <Select.Item label="Nữ" value={false} />
             </Select>
-
-            <FormControl.ErrorMessage></FormControl.ErrorMessage>
           </FormControl>
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Ngày Sinh:</FormControl.Label>
             <Input
-              borderColor="info.500"
               placeholder="Ngày Sinh"
               fontSize={16}
               height="10"
               isReadOnly
-              value={moment(formData?.dateOfBirth).format('DD/MM/YYYY')}
-              // onValueChange={(value) => setFormData({ ...formData, dateOfBirth: value })}
+              borderColor="gray.500"
+              value={moment(formik.values?.dateOfBirth).format('DD/MM/YYYY')}
               InputRightElement={
                 <Icon
                   as={<AntDesign name="calendar" />}
@@ -306,46 +360,38 @@ const User = () => {
                 />
               }
             />
-            <FormControl.ErrorMessage></FormControl.ErrorMessage>
           </FormControl>
           {isShowDatePicker && (
             <DateTimePicker
-              value={moment(formData?.dateOfBirth).toDate()}
+              maximumDate={moment().subtract(18, 'year').endOf('year').toDate()}
+              value={moment(formik.values?.dateOfBirth).toDate()}
               mode="date"
               is24Hour={true}
               onChange={onChangeDatePicker}
             />
           )}
           <FormControl isRequired>
-            <FormControl.Label _text={{ fontSize: 15 }}>CMND/CCCD:</FormControl.Label>
+            <FormControl.Label _text={{ fontSize: 15 }}>CMND / CCCD:</FormControl.Label>
             <Input
-              // InputLeftElement={
-              //   <Icon as={<AntDesign name="mobile1" />} size={5} ml="2" color="muted.400" />
-              // }
               borderColor="gray.500"
               sReadOnly="true"
               placeholder="CMND/CCCD"
               fontSize={16}
               height="10"
-              value={currentUser?.cmnd}
+              value={formik.values?.cmnd}
               backgroundColor="#DCDCDC"
-              // onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
             />
           </FormControl>
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 15 }}>Bệnh Viện Công Tác:</FormControl.Label>
             <Input
-              // InputLeftElement={
-              //   <Icon as={<AntDesign name="mobile1" />} size={5} ml="2" color="muted.400" />
-              // }
               borderColor="gray.500"
               sReadOnly="true"
               placeholder="Bệnh Viện Công Tác"
               fontSize={16}
               height="10"
-              value={currentUser?.hospital.name}
+              value={formik.values?.hospital.name}
               backgroundColor="#DCDCDC"
-              // onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
             />
           </FormControl>
           <Button
@@ -353,41 +399,12 @@ const User = () => {
             bg="info.500"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
-            onPress={handleVisibleConfirmDialogUpdateInfo}
+            onPress={formik.handleSubmit}
+            mb="2"
           >
             Cập Nhật Thông Tin
           </Button>
-          <Button
-            mb={15}
-            bg="warmGray.500"
-            onPress={handleVisibleConfirmDialogLogout}
-            _text={{ fontSize: 18, fontWeight: 'bold' }}
-          >
-            Đăng Xuất
-          </Button>
-
-          {/* <FormControl isRequired>
-          <FormControl.Label _text={{ fontSize: 15 }}>Bệnh Viện Công Tác:</FormControl.Label>
-          <Select
-            height="10"
-            borderColor="info.500"
-            accessibilityLabel="Bệnh Viện Công Tác"
-            placeholder="Bệnh Viện Công Tác"
-            _selectedItem={{
-              bg: 'teal.600',
-              endIcon: <CheckIcon size={5} />,
-            }}
-            mt="1"
-            fontSize={16}
-            // onValueChange={(value) =>
-            //   setFormRegisterData({ ...formRegisterData, hospitalId: value })
-            // }
-          >
-          </Select>
-          <FormControl.ErrorMessage></FormControl.ErrorMessage>
-        </FormControl> */}
         </VStack>
-
         {/* Dialog Confirm Update */}
       </Box>
       <AlertDialog isOpen={isVisibleAlertDialog} onClose={() => setIsVisibleAlertDialog(false)}>

@@ -3,7 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { NativeBaseProvider } from 'native-base';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import 'react-native-gesture-handler';
 import doctorAPI from './api/doctorAPI';
 import { firebaseApp } from './config/firebase';
@@ -12,6 +12,7 @@ import AuthNavigator from './screens/navigator/AuthNavigator';
 import AppStackNavigator from './screens/navigator/AppStackNavigator';
 import sharedStore from './store/sharedStore';
 import pushDeviceAPI from './api/pushDeviceAPI';
+import { LinearGradient } from 'expo-linear-gradient';
 // Define the config
 // const config = {
 //   useSystemColorMode: false,
@@ -27,22 +28,33 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    // shouldSetBadge: false,
   }),
 });
 
+const config = {
+  dependencies: {
+    'linear-gradient': LinearGradient,
+  },
+};
+
 export default function App() {
   const {
-    currentUser,
     setCurrentUser,
-    tokenPushDevice,
     setTokenPushDevice,
     setIsNotRegistered,
     setIsShowRegisterSuccessfulAlert,
     setIsShowDisabledAlert,
+    setNotificationsSource,
+    setIsVisibleNotificationBadge,
+    getAllNotification,
+    setIsVisibleAlertDialog,
   } = sharedStore((state) => state);
   const [isLoadingWelcome, setIsLoadingWelcome] = useState(true);
   const [isNotLogIn, setIsNotLogIn] = useState(true);
+  const [notification, setNotification] = useState(false);
+  const notificationListener = useRef();
+  const responseListener = useRef();
 
   useEffect(() => {
     const unsubscribed = firebaseApp.auth().onAuthStateChanged(async (firebaseUser) => {
@@ -76,8 +88,10 @@ export default function App() {
           console.log('login va da active');
           const doctorDataResult = await doctorAPI.getDoctorByDoctorId(checkDoctorExistResult.id);
           await setCurrentUser(doctorDataResult);
+          setIsVisibleAlertDialog(false);
           registerForPushNotificationsAsync().then(async (token) => {
             setTokenPushDevice(token);
+
             const sendPushDeviceData = {
               clientId: token,
               platform: 'app',
@@ -85,9 +99,11 @@ export default function App() {
             };
             try {
               await pushDeviceAPI.register(sendPushDeviceData);
+              console.log('running');
             } catch (error) {
               if (error.status === 409) {
                 console.log('đã push token');
+                getAllNotification(28);
                 setIsNotLogIn(false);
                 return;
               }
@@ -138,13 +154,45 @@ export default function App() {
     //   Notifications.setNotificationChannelAsync('default', {
     //     name: 'default',
     //     importance: Notifications.AndroidImportance.MAX,
-    //     vibrationPattern: [0, 250, 250, 250],
+    //     vibrationPattern: true,
     //     lightColor: '#FF231F7C',
+    //     sound: ''
     //   });
     // }
 
     return token;
   }
+
+  useEffect(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
+      console.log(notification);
+      setNotification(notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      console.log(response);
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
+
+  // const getAllNotification = async (doctorId) => {
+  //   try {
+  //     const notificationResult = await pushDeviceAPI.getNotificationByDoctorId(doctorId);
+  //     setNotificationsSource(notificationResult);
+  //     //If find any notification unread, visible badge
+  //     if (notificationResult.find((notification) => notification.isRead === false)) {
+  //       setIsVisibleNotificationBadge('');
+  //     } else {
+  //       setIsVisibleNotificationBadge(null);
+  //     }
+  //   } catch (error) {
+  //     console.log(error);
+  //   }
+  // };
 
   if (isLoadingWelcome) {
     return (
@@ -165,7 +213,7 @@ export default function App() {
   }
 
   return (
-    <NativeBaseProvider>
+    <NativeBaseProvider config={config}>
       <NavigationContainer>
         {isNotLogIn ? <AuthNavigator /> : <AppStackNavigator />}
       </NavigationContainer>

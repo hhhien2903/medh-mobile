@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Text,
@@ -20,6 +20,7 @@ import * as Google from 'expo-google-app-auth';
 import firebase from 'firebase';
 import { useNavigation } from '@react-navigation/native';
 import sharedStore from '../store/sharedStore';
+import { useFocusEffect } from '@react-navigation/native';
 
 export const Login = () => {
   const navigation = useNavigation();
@@ -34,6 +35,7 @@ export const Login = () => {
     setIsNotRegistered,
     isShowDisabledAlert,
     setIsShowDisabledAlert,
+    currentUser,
   } = sharedStore((state) => state);
   const handleLoginGoogle = async () => {
     Google.logInAsync(OAuthConfig)
@@ -49,11 +51,31 @@ export const Login = () => {
   };
 
   useEffect(() => {
-    if (isNotRegistered) {
-      console.log('login nhung chua dang ky ne');
-      navigation.navigate('Register');
-    }
+    let checkIsNotRegistered = setTimeout(() => {
+      if (isNotRegistered) {
+        navigation.navigate('Register');
+      }
+    }, 500);
+    return () => {
+      clearTimeout(checkIsNotRegistered);
+    };
   }, [isNotRegistered]);
+
+  // useEffect(() => {
+  //   if (isNotRegistered) {
+  //     console.log('login nhung chua dang ky ne');
+  //     console.log('why');
+  //     navigation.navigate('Register');
+  //   }
+  // }, []);
+
+  // useFocusEffect(() => {
+  //   useCallback(() => {
+  //     console.log('login nhung chua dang ky ne');
+  //     console.log('why');
+  //     // navigation.navigate('Register');
+  //   }, []);
+  // });
 
   const isUserEqual = (googleUser, firebaseUser) => {
     if (firebaseUser) {
@@ -147,9 +169,9 @@ export const Login = () => {
       <Image source={medHLogo} alt="Alternate Text" height={150} resizeMode="contain" />
       <Box w="80%">
         <HStack justifyContent="center" mt="5">
-          <Heading fontWeight="bold" color="coolGray.800" fontSize={30}>
+          {/* <Heading fontWeight="bold" color="coolGray.800" fontSize={30}>
             ĐĂNG NHẬP
-          </Heading>
+          </Heading> */}
         </HStack>
         <VStack space={3} mt="5">
           {/* <Text selectable fontWeight="bold" color="coolGray.800" fontSize={15}>

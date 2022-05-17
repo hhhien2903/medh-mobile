@@ -29,7 +29,8 @@
           "certificateHash": "2F8691F6133AF6E18A5B4D4986CF416B663AC042"
         }
       },
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"

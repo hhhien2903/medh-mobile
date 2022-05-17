@@ -1,39 +1,35 @@
-import { Keyboard } from 'react-native';
-import React, { useRef, useState, useEffect } from 'react';
+import { AntDesign } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import firebase from 'firebase';
+import { useFormik } from 'formik';
 import {
+  AlertDialog,
+  Box,
   Button,
-  Center,
   FormControl,
   Heading,
-  Input,
-  VStack,
-  Box,
   Icon,
   Image,
-  HStack,
+  Input,
   KeyboardAvoidingView,
-  AlertDialog,
+  Text,
+  useToast,
+  VStack,
 } from 'native-base';
-import { AntDesign } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { Keyboard } from 'react-native';
+import * as Yup from 'yup';
 import medHLogo from '../assets/images/med-h-logo.png';
-import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
-import { firebaseApp, OAuthConfig } from '../config/firebase';
-import { useNavigation } from '@react-navigation/native';
-import firebase from 'firebase';
-import { useToast } from 'native-base';
+import { firebaseApp } from '../config/firebase';
 import sharedStore from '../store/sharedStore';
+import { phoneNumberRegex } from '../utils/regex';
 const LoginPhone = () => {
   const recaptchaVerifier = useRef();
-  // const [phoneNumber, setPhoneNumber] = useState();
   const [verificationId, setVerificationId] = useState();
-  // const [verificationCode, setVerificationCode] = useState();
-  const [errors, setErrors] = useState({});
-  const [formData, setFormData] = useState({});
   const navigation = useNavigation();
-
   const toast = useToast();
   const {
-    isLoadingSpinnerOverLay,
     setIsLoadingSpinnerOverLay,
     setIsShowRegisterSuccessfulAlert,
     isNotRegistered,
@@ -41,65 +37,34 @@ const LoginPhone = () => {
     isShowRegisterSuccessfulAlert,
   } = sharedStore((state) => state);
 
-  const validateForm = (validateField) => {
-    switch (validateField) {
-      case 'phoneNumberField': {
-        const phoneRegex = new RegExp(/(^(84|0)[3|5|7|8|9])+([0-9]{8})\b/);
-        if (!formData.phoneNumber) {
-          toast.show({
-            title: 'Số điện thoại không được để trống.',
-            status: 'warning',
-            placement: 'top',
-          });
-          return false;
-        }
-        if (!phoneRegex.test(formData.phoneNumber)) {
-          toast.show({
-            title: 'Số điện thoại không đúng định dạng.',
-            status: 'warning',
-            placement: 'top',
-          });
-          return false;
-        }
-        return true;
-      }
-      case 'OTPCodeField': {
-        const OTPRegex = new RegExp(/^[0-9]{1,6}$\b/);
-        if (!formData.OTPCode) {
-          toast.show({
-            title: 'Mã OTP không được để trống.',
-            status: 'warning',
-            placement: 'top',
-          });
-          return false;
-        }
-        if (!OTPRegex.test(formData.OTPCode)) {
-          toast.show({
-            title: 'Mã OTP không đúng định dạng.',
-            status: 'warning',
-            placement: 'top',
-          });
-          return false;
-        }
-        return true;
-      }
-      default:
-        return false;
-    }
-  };
+  const formik = useFormik({
+    initialValues: {
+      mobile: '',
+      otpCode: '',
+    },
+    validationSchema: Yup.object({
+      mobile: Yup.string()
+        .matches(phoneNumberRegex, 'Số Điện Thoại không đúng định dạng.')
+        .required('Số Điện Thoại không được để trống.'),
+      otpCode: Yup.string()
+        .matches(new RegExp(/^[0-9]{1,6}$\b/), 'Mã OTP không đúng định dạng.')
+        .required('Mã OTP không được để trống.'),
+    }),
+
+    onSubmit: () => {
+      handleSubmitOTP();
+    },
+  });
+
   const handleGetOTPCode = async () => {
-    if (!validateForm('phoneNumberField')) {
-      return;
-    }
     try {
       const phoneProvider = new firebase.auth.PhoneAuthProvider();
-      let { phoneNumber } = formData;
+      let phoneNumber = formik.values.mobile;
       if (phoneNumber.substring(0, 2) === '84') {
         phoneNumber = '+' + phoneNumber;
       } else {
         phoneNumber = '+84' + phoneNumber.substring(1, phoneNumber.length);
       }
-
       const verificationId = await phoneProvider.verifyPhoneNumber(
         phoneNumber,
         recaptchaVerifier.current
@@ -107,7 +72,7 @@ const LoginPhone = () => {
       setVerificationId(verificationId);
       Keyboard.dismiss();
       toast.show({
-        title: 'Mã OTP đã được gửi!',
+        title: 'Mã OTP đã được gửi đến Số điện thoại của bạn.',
         status: 'success',
         placement: 'top',
       });
@@ -122,14 +87,11 @@ const LoginPhone = () => {
   };
 
   const handleSubmitOTP = async () => {
-    if (!validateForm('phoneNumberField') || !validateForm('OTPCodeField')) {
-      return;
-    }
     try {
       setIsLoadingSpinnerOverLay(true);
       const credential = firebase.auth.PhoneAuthProvider.credential(
         verificationId,
-        formData.OTPCode
+        formik.values.otpCode
       );
       await firebaseApp
         .auth()
@@ -145,8 +107,6 @@ const LoginPhone = () => {
         title: 'Mã OTP không đúng!',
         status: 'warning',
         placement: 'top',
-
-        // description: 'This is to inform you that your network connectivity is restored',
       });
     }
   };
@@ -199,7 +159,7 @@ const LoginPhone = () => {
             TIẾP TỤC VỚI SỐ ĐIỆN THOẠI
           </Heading>
         </VStack>
-        <VStack space={5} px={8} mt="25px">
+        <VStack space={4} px={4} mt="25px">
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Số Điện Thoại:</FormControl.Label>
             <Input
@@ -210,8 +170,10 @@ const LoginPhone = () => {
               placeholder="Số Điện Thoại"
               fontSize={16}
               height={50}
-              onChangeText={(value) => setFormData({ ...formData, phoneNumber: value })}
+              value={formik.values.mobile}
+              onChangeText={formik.handleChange('mobile')}
             />
+            {formik.errors.mobile && <Text color="danger.500">{formik.errors.mobile}</Text>}
           </FormControl>
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Mã OTP:</FormControl.Label>
@@ -223,21 +185,27 @@ const LoginPhone = () => {
               placeholder="Mã OTP"
               fontSize={16}
               height={50}
+              value={formik.values.otpCode}
               InputRightElement={
                 <Button
                   rounded="none"
                   w="1/3"
                   h="full"
                   bg="info.500"
+                  _text={{ fontWeight: 'bold' }}
                   onPress={handleGetOTPCode}
-                  isDisabled={!formData.phoneNumber}
+                  isDisabled={
+                    formik.errors.mobile ? true : false || !formik.values.mobile ? true : false
+                  }
                 >
                   Nhận OTP
                 </Button>
               }
-              onChangeText={(value) => setFormData({ ...formData, OTPCode: value })}
+              onChangeText={formik.handleChange('otpCode')}
             />
-            <FormControl.ErrorMessage></FormControl.ErrorMessage>
+            {formik.errors.otpCode && formik.touched.otpCode && (
+              <Text color="danger.500">{formik.errors.otpCode}</Text>
+            )}
           </FormControl>
 
           <Button
@@ -245,13 +213,13 @@ const LoginPhone = () => {
             bg="info.500"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
-            onPress={handleSubmitOTP}
+            onPress={formik.handleSubmit}
           >
             Đăng Nhập
           </Button>
           <Button
             mt="5"
-            bg="trueGray.300"
+            bg="warmGray.500"
             height={50}
             _text={{ fontSize: 18, fontWeight: 'bold' }}
             onPress={goBackToLoginScreen}
