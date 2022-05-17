@@ -103,7 +103,7 @@ export default function App() {
             } catch (error) {
               if (error.status === 409) {
                 console.log('đã push token');
-                getAllNotification(28);
+                getAllNotification(doctorDataResult.id);
                 setIsNotLogIn(false);
                 return;
               }

@@ -17,7 +17,8 @@ import {
   Text,
   useToast,
 } from 'native-base';
-import { LineChart } from 'react-native-chart-kit';
+import { FontAwesome5 } from '@expo/vector-icons';
+// import { LineChart } from 'react-native-chart-kit';
 import moment from 'moment';
 import medicalRecordAPI from '../api/medicalRecordAPI';
 import sharedStore from '../store/sharedStore';
@@ -25,7 +26,7 @@ import Chart from '../components/Chart';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { useNavigation } from '@react-navigation/native';
-
+import { LineChart } from 'react-native-wagmi-charts';
 const PatientDetail = (props) => {
   const { medicalRecordId } = props.route.params;
   const {
@@ -35,55 +36,58 @@ const PatientDetail = (props) => {
     setSelectedMedicalRecordDetail,
   } = sharedStore((state) => state);
   const [medicalRecordSource, setMedicalRecordSource] = useState({});
+  const [selectedDateChart, setSelectedDateChart] = useState(null);
   const [medicalReportSource, setMedicalReportSource] = useState([]);
   const [listTempDateChart, setListTempDateChart] = useState([]);
+  const [chartData, setChartData] = useState([]);
+
   const toast = useToast();
   const navigation = useNavigation();
   const tempTestData = [
     {
-      date: '18/04/2022',
+      date: '2022-05-02T04:02:42.367Z',
       hour: '01:00',
-      temp: 38,
+      temperature: 38,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T05:03:42.367Z',
       hour: '02:00',
-      temp: 38,
+      temperature: 35,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T08:03:42.367Z',
       hour: '03:00',
-      temp: 39,
+      temperature: 39,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T10:03:42.367Z',
       hour: '04:00',
-      temp: 40,
+      temperature: 40,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T11:03:42.367Z',
       hour: '05:00',
-      temp: 39.5,
+      temperature: 39.5,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T12:03:42.367Z',
       hour: '06:00',
-      temp: 39,
+      temperature: 39,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T13:03:42.367Z',
       hour: '07:00',
-      temp: 39,
+      temperature: 39,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T15:03:42.367Z',
       hour: '08:00',
-      temp: 40,
+      temperature: 40,
     },
     {
-      date: '18/04/2022',
+      date: '2022-05-02T16:03:42.367Z',
       hour: '09:00',
-      temp: 39,
+      temperature: 39,
     },
     // {
     //   date: '18/04/2022',
@@ -144,6 +148,7 @@ const PatientDetail = (props) => {
       const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
         medicalRecordId
       );
+
       setMedicalReportSource(medicalReportResult);
       const filteredDates = medicalReportResult
         .map((temp) => moment(temp.date).format('DD/MM/YYYY'))
@@ -154,7 +159,25 @@ const PatientDetail = (props) => {
     }
   };
 
-  const handleSelectDateChart = (value) => {};
+  const handleChangeDateChart = (selectedDate) => {
+    setSelectedDateChart(selectedDate);
+    const tempList = medicalReportSource.filter(
+      (medicalReport) => moment(medicalReport.date).format('DD/MM/YYYY') === selectedDate
+    );
+
+    let chartData = Promise.all(
+      tempList.map((temp) => {
+        return {
+          timestamp: moment(temp.date).format('X'),
+          value: temp.temperature,
+        };
+      })
+    ).then((value) => {
+      console.log(value);
+      setChartData(value);
+    });
+    // console.log(chartData);
+  };
 
   useLayoutEffect(() => {
     getMedicalRecordDetail();
@@ -209,6 +232,20 @@ const PatientDetail = (props) => {
           );
         },
       });
+    }
+  };
+
+  const getYAxisLabelValues = () => {
+    if (chartData != undefined) {
+      let minValue = Math.min(...chartData.map((data) => data.value));
+      let maxValue = Math.max(...chartData.map((data) => data.value));
+      let midValue = (minValue + maxValue) / 2;
+      let lowerMidValue = (minValue + midValue) / 2;
+      let higherMidValue = (maxValue + midValue) / 2;
+
+      return [maxValue, higherMidValue, midValue, lowerMidValue, minValue];
+    } else {
+      return [];
     }
   };
 
@@ -313,29 +350,33 @@ const PatientDetail = (props) => {
       </View> */}
         <Divider my={2} w="96%" ml="2%" height={0.5} />
         <View style={{ paddingTop: 0 }}>
-          <HStack justifyContent="flex-end" pr={2} mb={3} mt={1}>
+          <HStack justifyContent="space-between" px={3} mb={3} mt={1} alignItems="center">
+            <FontAwesome5 name="temperature-high" size={40} color="#71717a" />
             <Select
-              height="10"
               borderWidth={2}
-              borderColor="gray.300"
-              placeholder="Chọn Ngày"
+              borderColor="gray.500"
+              placeholder="Chọn Ngày Xem Biểu Đồ"
               borderRadius={8}
-              w="150"
+              w="250"
               _selectedItem={{
                 endIcon: <CheckIcon size={5} />,
               }}
+              placeholderTextColor="gray.700"
               // defaultValue={formData?.gender}
               fontSize={16}
-              onValueChange={handleSelectDateChart}
+              selectedValue={selectedDateChart}
+              onValueChange={(value) => handleChangeDateChart(value)}
             >
-              {/* {listTempDateChart.map()} */}
-              <Select.Item label="03/05/2022" value={true} />
+              {listTempDateChart.map((date, index) => {
+                return <Select.Item key={index} label={date} value={date} />;
+              })}
+
               {/* <Select.Item label="Nữ" value={false} /> */}
             </Select>
           </HStack>
 
           <Box style={{ display: 'flex', justifyContent: 'center', flexDirection: 'row' }} mb={5}>
-            <LineChart
+            {/* <LineChart
               data={{
                 labels: tempTestData?.map((temp) => temp.hour),
                 datasets: [
@@ -372,7 +413,90 @@ const PatientDetail = (props) => {
                 // padding: 5,
                 borderRadius: 10,
               }}
-            />
+            /> */}
+            {chartData.length > 0 && (
+              <>
+                <Box
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    maxHeight: 30,
+                  }}
+                >
+                  <Text fontSize={18} fontWeight={'bold'}>
+                    Biểu Đồ Nhiệt Độ
+                  </Text>
+                </Box>
+
+                <Box
+                  style={{
+                    position: 'absolute',
+                    left: 10,
+                    top: 0,
+                    bottom: 0,
+
+                    justifyContent: 'space-between',
+                    marginTop: 70,
+                    paddingTop: 20,
+                  }}
+                >
+                  {getYAxisLabelValues().map((item, index) => {
+                    return (
+                      <Text key={index} fontSize="13" fontWeight={'semibold'}>
+                        {item} °C
+                      </Text>
+                    );
+                  })}
+                </Box>
+
+                <LineChart.Provider data={chartData}>
+                  <LineChart.DatetimeText
+                    style={{
+                      position: 'absolute',
+                      top: 20,
+                      right: 10,
+                      fontSize: 20,
+                      fontWeight: 'bold',
+                    }}
+                    format={({ value }) => {
+                      'worklet';
+
+                      let date = new Date(value * 1000);
+
+                      if (date.getFullYear() === 1970) {
+                        return '';
+                      }
+
+                      return `${date.getHours() < 10 ? '0' + date.getHours() : date.getHours()}:${
+                        date.getMinutes() < 10 ? '0' + date.getMinutes() : date.getMinutes()
+                      }`;
+                    }}
+                  />
+                  <LineChart.PriceText
+                    format={({ value }) => {
+                      'worklet';
+                      return `${value}${!value ? '' : '°C'}`;
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: 50,
+                      right: 10,
+                      fontSize: 18,
+                      fontWeight: '500',
+                    }}
+                  />
+
+                  <LineChart height={300} style={{ marginTop: 80, opacity: 1 }}>
+                    <LineChart.Path color="#60a5fa" />
+                    <LineChart.CursorCrosshair>
+                      {/* <LineChart.Tooltip /> */}
+                    </LineChart.CursorCrosshair>
+                  </LineChart>
+                </LineChart.Provider>
+              </>
+            )}
+
             {/* <Chart xKey="hour" y="temp" chartPrices={tempTestData} /> */}
           </Box>
 

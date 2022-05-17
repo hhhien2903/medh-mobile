@@ -100,7 +100,7 @@ const Notification = () => {
 
   const handleRefresh = async () => {
     setIsRefreshActive(true);
-    await getAllNotification(28);
+    await getAllNotification(currentUser.id);
     setIsRefreshActive(false);
   };
 
