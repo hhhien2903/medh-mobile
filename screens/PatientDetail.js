@@ -145,10 +145,10 @@ const PatientDetail = (props) => {
 
   const getMedicalReportChart = async () => {
     try {
-      // const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
-      //   medicalRecordId
-      // );
-      const medicalReportResult = [...tempTestData];
+      const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
+        medicalRecordId
+      );
+      // const medicalReportResult = [...tempTestData];
       setMedicalReportSource(medicalReportResult);
       const filteredDates = medicalReportResult
         .map((temp) => moment(temp.date).format('DD/MM/YYYY'))
