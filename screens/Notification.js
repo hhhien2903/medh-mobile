@@ -113,7 +113,7 @@ const Notification = () => {
   };
 
   const handlePressNotificationItem = (notification) => {
-    navigation.navigate('PatientDetail', { medicalRecordId: 40 });
+    navigation.navigate('PatientDetail', { medicalRecordId: notification?.medicalRecordId });
     const notificationIndex = notificationsSource.findIndex(
       (notificationItem) => notification.id === notificationItem.id
     );

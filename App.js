@@ -1,4 +1,4 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -55,7 +55,7 @@ export default function App() {
   const [notification, setNotification] = useState(false);
   const notificationListener = useRef();
   const responseListener = useRef();
-
+  const navigationRef = useNavigationContainerRef();
   useEffect(() => {
     const unsubscribed = firebaseApp.auth().onAuthStateChanged(async (firebaseUser) => {
       if (!firebaseUser) {
@@ -164,13 +164,17 @@ export default function App() {
   }
 
   useEffect(() => {
+    //handle listening receive new notification
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log(notification);
+      // console.log(notification);
       setNotification(notification);
     });
 
+    //handle press notification in Device Notification Bar
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log(response);
+      navigationRef.navigate('PatientDetail', {
+        medicalRecordId: response.notification.request.content.data?.medicalRecordId,
+      });
     });
 
     return () => {
@@ -178,21 +182,6 @@ export default function App() {
       Notifications.removeNotificationSubscription(responseListener.current);
     };
   }, []);
-
-  // const getAllNotification = async (doctorId) => {
-  //   try {
-  //     const notificationResult = await pushDeviceAPI.getNotificationByDoctorId(doctorId);
-  //     setNotificationsSource(notificationResult);
-  //     //If find any notification unread, visible badge
-  //     if (notificationResult.find((notification) => notification.isRead === false)) {
-  //       setIsVisibleNotificationBadge('');
-  //     } else {
-  //       setIsVisibleNotificationBadge(null);
-  //     }
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
 
   if (isLoadingWelcome) {
     return (
@@ -214,7 +203,7 @@ export default function App() {
 
   return (
     <NativeBaseProvider config={config}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         {isNotLogIn ? <AuthNavigator /> : <AppStackNavigator />}
       </NavigationContainer>
     </NativeBaseProvider>

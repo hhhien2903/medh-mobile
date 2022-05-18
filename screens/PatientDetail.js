@@ -47,22 +47,22 @@ const PatientDetail = (props) => {
     {
       date: '2022-05-02T04:02:42.367Z',
       hour: '01:00',
-      temperature: 38,
+      temperature: 38.5,
     },
     {
       date: '2022-05-02T05:03:42.367Z',
       hour: '02:00',
-      temperature: 35,
+      temperature: 35.5,
     },
     {
       date: '2022-05-02T08:03:42.367Z',
       hour: '03:00',
-      temperature: 39,
+      temperature: 39.5,
     },
     {
       date: '2022-05-02T10:03:42.367Z',
       hour: '04:00',
-      temperature: 40,
+      temperature: 40.5,
     },
     {
       date: '2022-05-02T11:03:42.367Z',
@@ -72,22 +72,22 @@ const PatientDetail = (props) => {
     {
       date: '2022-05-02T12:03:42.367Z',
       hour: '06:00',
-      temperature: 39,
+      temperature: 39.5,
     },
     {
       date: '2022-05-02T13:03:42.367Z',
       hour: '07:00',
-      temperature: 39,
+      temperature: 39.5,
     },
     {
       date: '2022-05-02T15:03:42.367Z',
       hour: '08:00',
-      temperature: 40,
+      temperature: 40.5,
     },
     {
       date: '2022-05-02T16:03:42.367Z',
       hour: '09:00',
-      temperature: 39,
+      temperature: 39.5,
     },
     // {
     //   date: '18/04/2022',
@@ -145,10 +145,10 @@ const PatientDetail = (props) => {
 
   const getMedicalReportChart = async () => {
     try {
-      const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
-        medicalRecordId
-      );
-
+      // const medicalReportResult = await medicalRecordAPI.getReportByMedicalRecordId(
+      //   medicalRecordId
+      // );
+      const medicalReportResult = [...tempTestData];
       setMedicalReportSource(medicalReportResult);
       const filteredDates = medicalReportResult
         .map((temp) => moment(temp.date).format('DD/MM/YYYY'))
@@ -165,7 +165,7 @@ const PatientDetail = (props) => {
       (medicalReport) => moment(medicalReport.date).format('DD/MM/YYYY') === selectedDate
     );
 
-    let chartData = Promise.all(
+    Promise.all(
       tempList.map((temp) => {
         return {
           timestamp: moment(temp.date).format('X'),
@@ -173,7 +173,6 @@ const PatientDetail = (props) => {
         };
       })
     ).then((value) => {
-      console.log(value);
       setChartData(value);
     });
     // console.log(chartData);
@@ -435,17 +434,20 @@ const PatientDetail = (props) => {
                     left: 10,
                     top: 0,
                     bottom: 0,
-
                     justifyContent: 'space-between',
                     marginTop: 70,
-                    paddingTop: 20,
+                    // paddingTop: 10,
+                    height: 300,
+                    width: '100%',
                   }}
                 >
                   {getYAxisLabelValues().map((item, index) => {
                     return (
-                      <Text key={index} fontSize="13" fontWeight={'semibold'}>
-                        {item} °C
-                      </Text>
+                      <Box key={index} borderBottomColor="red.200" borderBottomWidth={1}>
+                        <Text fontSize="13" fontWeight={'semibold'}>
+                          {item} °C
+                        </Text>
+                      </Box>
                     );
                   })}
                 </Box>
@@ -476,8 +478,10 @@ const PatientDetail = (props) => {
                   <LineChart.PriceText
                     format={({ value }) => {
                       'worklet';
+
                       return `${value}${!value ? '' : '°C'}`;
                     }}
+                    precision={1}
                     style={{
                       position: 'absolute',
                       top: 50,
