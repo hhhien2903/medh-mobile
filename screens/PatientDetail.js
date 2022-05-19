@@ -16,6 +16,7 @@ import {
   TextArea,
   Text,
   useToast,
+  AlertDialog,
 } from 'native-base';
 import { FontAwesome5 } from '@expo/vector-icons';
 // import { LineChart } from 'react-native-chart-kit';
@@ -40,6 +41,7 @@ const PatientDetail = (props) => {
   const [medicalReportSource, setMedicalReportSource] = useState([]);
   const [listTempDateChart, setListTempDateChart] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [isVisibleAlertDialog, setIsVisibleAlertDialog] = useState(false);
 
   const toast = useToast();
   const navigation = useNavigation();
@@ -192,15 +194,17 @@ const PatientDetail = (props) => {
     }),
 
     onSubmit: (form) => {
-      handleEndMedicalRecord(form);
+      setIsVisibleAlertDialog(true);
+      // handleEndMedicalRecord(form);
     },
   });
 
-  const handleEndMedicalRecord = async (form) => {
+  const handleEndMedicalRecord = async () => {
+    setIsVisibleAlertDialog(false);
     try {
       let sendData = {
         medicalRecordId: medicalRecordId,
-        conclude: form.conclude,
+        conclude: formik.values.conclude,
       };
       await medicalRecordAPI.endFollowMedicalRecord(sendData);
       toast.show({
@@ -537,6 +541,29 @@ const PatientDetail = (props) => {
               </Modal.Footer>
             </Modal.Content>
           </Modal>
+          <AlertDialog isOpen={isVisibleAlertDialog} onClose={() => setIsVisibleAlertDialog(false)}>
+            <AlertDialog.Content>
+              <AlertDialog.CloseButton />
+              <AlertDialog.Header>Xác Nhận</AlertDialog.Header>
+              <AlertDialog.Body>
+                Bạn có thực sự muốn kết thúc Bệnh án? Thao tác này sẽ không thể hoàn tác.
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <Button.Group space={2}>
+                  <Button
+                    variant="unstyled"
+                    colorScheme="coolGray"
+                    onPress={() => setIsVisibleAlertDialog(false)}
+                  >
+                    Huỷ
+                  </Button>
+                  <Button colorScheme="danger" onPress={handleEndMedicalRecord}>
+                    Đồng Ý
+                  </Button>
+                </Button.Group>
+              </AlertDialog.Footer>
+            </AlertDialog.Content>
+          </AlertDialog>
         </View>
       </View>
     </ScrollView>

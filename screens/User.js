@@ -57,7 +57,8 @@ const User = () => {
     try {
       setIsLoadingSpinnerOverLay(true);
       const userInfoResult = await doctorAPI.getDoctorByDoctorId(currentUser.id);
-      setCurrentUser(userInfoResult);
+
+      await setCurrentUser(userInfoResult);
       setIsLoadingSpinnerOverLay(false);
     } catch (error) {
       setIsLoadingSpinnerOverLay(false);
@@ -87,6 +88,7 @@ const User = () => {
       };
       await doctorAPI.updateInfo(sendData);
       await getCurrentUserInfo();
+
       toast.show({
         title: 'Thao tác thành công.',
         placement: 'top',
@@ -124,7 +126,7 @@ const User = () => {
         y: 0,
         animated: false,
       });
-    }, [])
+    }, [currentUser])
   );
 
   const pickImage = async () => {
