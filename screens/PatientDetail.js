@@ -18,6 +18,8 @@ import {
   useToast,
   AlertDialog,
 } from 'native-base';
+import { RefreshControl } from 'react-native';
+
 import { FontAwesome5 } from '@expo/vector-icons';
 // import { LineChart } from 'react-native-chart-kit';
 import moment from 'moment';
@@ -42,6 +44,7 @@ const PatientDetail = (props) => {
   const [listTempDateChart, setListTempDateChart] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [isVisibleAlertDialog, setIsVisibleAlertDialog] = useState(false);
+  const [isRefreshActive, setIsRefreshActive] = useState(false);
 
   const toast = useToast();
   const navigation = useNavigation();
@@ -252,8 +255,16 @@ const PatientDetail = (props) => {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshActive(true);
+    await getMedicalRecordDetail();
+    setIsRefreshActive(false);
+  };
+
   return (
-    <ScrollView>
+    <ScrollView
+      refreshControl={<RefreshControl refreshing={isRefreshActive} onRefresh={handleRefresh} />}
+    >
       <View>
         <Box padding={2}>
           <VStack
@@ -313,7 +324,7 @@ const PatientDetail = (props) => {
                 <Text style={style.title}>Nhiệt Độ:</Text>
                 <Text style={style.content}>
                   {medicalRecordSource?.medicalRecordDevice?.device?.temp
-                    ? `${medicalRecordDetail?.medicalRecordDevice?.device?.temp?.toFixed(2)} °C`
+                    ? `${medicalRecordSource?.medicalRecordDevice?.device?.temp?.toFixed(2)} °C`
                     : 'Đang cập nhật...'}
                 </Text>
               </HStack>
