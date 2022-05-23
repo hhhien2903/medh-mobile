@@ -308,6 +308,18 @@ const PatientDetail = (props) => {
                   : 'Chưa có.'}
               </Text>
             </HStack>
+            {!medicalRecordSource?.treated ? (
+              <HStack py="3" px="5" justifyContent="space-between">
+                <Text style={style.title}>Nhiệt Độ:</Text>
+                <Text style={style.content}>
+                  {medicalRecordSource?.medicalRecordDevice?.device?.temp
+                    ? `${medicalRecordDetail?.medicalRecordDevice?.device?.temp?.toFixed(2)} °C`
+                    : 'Đang cập nhật...'}
+                </Text>
+              </HStack>
+            ) : (
+              <></>
+            )}
             <HStack py="3" px="5" justifyContent="space-between">
               <Text style={style.title}>Thiết Bị:</Text>
               <Text style={style.content}>
