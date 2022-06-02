@@ -20,7 +20,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard } from 'react-native';
 import * as Yup from 'yup';
-import medHLogo from '../assets/images/med-h-logo.png';
+import medHLogo from '../assets/images/med_we_vertical.png';
 import { firebaseApp } from '../config/firebase';
 import sharedStore from '../store/sharedStore';
 import { phoneNumberRegex } from '../utils/regex';

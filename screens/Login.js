@@ -13,7 +13,7 @@ import {
   Image,
   AlertDialog,
 } from 'native-base';
-import medHLogo from '../assets/images/med-h-logo.png';
+import medHLogo from '../assets/images/med_we_vertical.png';
 import { firebaseApp, OAuthConfig } from '../config/firebase';
 import { AntDesign } from '@expo/vector-icons';
 import * as Google from 'expo-google-app-auth';
@@ -168,7 +168,7 @@ export const Login = () => {
       </AlertDialog>
       <Image source={medHLogo} alt="Alternate Text" height={150} resizeMode="contain" />
       <Box w="80%">
-        <HStack justifyContent="center" mt="5">
+        <HStack justifyContent="center" mt="2">
           {/* <Heading fontWeight="bold" color="coolGray.800" fontSize={30}>
             ĐĂNG NHẬP
           </Heading> */}

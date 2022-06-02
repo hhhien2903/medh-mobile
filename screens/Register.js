@@ -18,7 +18,7 @@ import {
 } from 'native-base';
 import moment from 'moment';
 import React, { useState, useEffect } from 'react';
-import medHLogo from '../assets/images/med-h-logo.png';
+import medHLogo from '../assets/images/med_we_vertical.png';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { firebaseApp } from '../config/firebase';
@@ -158,12 +158,12 @@ const Register = () => {
     <ScrollView>
       <Box safeArea p="2">
         <VStack justifyContent="center" alignItems="center" mt="30px">
-          <Image source={medHLogo} alt="Alternate Text" height={120} resizeMode="contain" />
-          <Heading fontWeight="bold" color="coolGray.800" size="lg" mt="25px">
+          <Image source={medHLogo} alt="Alternate Text" height={140} resizeMode="contain" />
+          <Heading fontWeight="bold" color="coolGray.800" size="lg" mt="15px">
             ĐĂNG KÝ TÀI KHOẢN
           </Heading>
         </VStack>
-        <VStack space={2} px={4} mt="20px">
+        <VStack space={2} px={4} mt="15px">
           <FormControl isRequired>
             <FormControl.Label _text={{ fontSize: 17 }}>Họ Và Tên:</FormControl.Label>
             <Input

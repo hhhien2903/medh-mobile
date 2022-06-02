@@ -1,5 +1,5 @@
 import React from 'react';
-import medHLogo from '../assets/images/med-h-logo.png';
+import medHLogo from '../assets/images/med_we_vertical.png';
 import { Center, Heading, HStack, Image, VStack } from 'native-base';
 import AnimatedEllipsis from '@xlanor/react-native-animated-ellipsis';
 
